@@ -1,0 +1,239 @@
+package com.kalshi.mock;
+
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import quickfix.*;
+import quickfix.MemoryStoreFactory;
+import quickfix.field.*;
+import quickfix.fix50sp2.ExecutionReport;
+import quickfix.fix50sp2.NewOrderSingle;
+
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+@Service
+public class FixServerService implements Application {
+
+    private Acceptor acceptor;
+    private final AtomicBoolean serverRunning = new AtomicBoolean(false);
+    private SessionSettings settings;
+
+    public void startServer() throws Exception {
+        if (serverRunning.get()) {
+            System.out.println("FIX Server is already running");
+            return;
+        }
+
+        try {
+            // Create hard-coded configuration
+            settings = createHardCodedSessionSettings();
+
+            // Create message store factory
+            MessageStoreFactory storeFactory = new MemoryStoreFactory();
+
+            // Create log factory
+            LogFactory logFactory = new ScreenLogFactory(true, true, true);
+
+            // Create message factory
+            MessageFactory messageFactory = new DefaultMessageFactory();
+
+            // Create acceptor
+            acceptor = new SocketAcceptor(this, storeFactory, settings, logFactory, messageFactory);
+
+            // Start acceptor
+            acceptor.start();
+            serverRunning.set(true);
+
+            System.out.println("FIX Server started at: " + LocalDateTime.now());
+        } catch (Exception e) {
+            System.err.println("Failed to start FIX server: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    private SessionSettings createHardCodedSessionSettings() throws ConfigError {
+        SessionSettings settings = new SessionSettings();
+        
+        // Default section settings
+
+        // settings.setString("FileLogPath", "logs");
+        settings.setString("ConnectionType", "acceptor");
+        settings.setString("StartTime", "07:10:00 UTC");
+        settings.setString("EndTime", "07:00:00 UTC");
+        settings.setString("ReconnectInterval", "5");
+        settings.setString("HeartBtInt", "30");
+        settings.setString("ValidOrderTypes", "1,2,8,D,F,G");
+        settings.setString("SenderCompID", "SIMULATOR");
+        settings.setString("TargetCompID", "FBG-TEST");
+        settings.setString("DefaultMarketPrice", "77");
+        settings.setString("ScreenLogLevels", "DEBUG");
+        
+        // Use your custom Kalshi dictionary instead of standard FIX dictionaries
+        settings.setString("DataDictionary", "kalshi-fix.xml");
+        settings.setString("TransportDataDictionary", "kalshi-fix.xml");
+        settings.setString("AppDataDictionary", "kalshi-fix.xml");
+        
+        // Session-specific settings
+        SessionID sessionID = new SessionID("FIXT.1.1", "SIMULATOR", "FBG-TEST");
+        settings.setString(sessionID, "BeginString", "FIXT.1.1");
+        settings.setString(sessionID, "DefaultApplVerID", "9");
+        settings.setString(sessionID, "SocketAcceptPort", "9878");
+        settings.setString(sessionID, "SocketAcceptAddress", "0.0.0.0");
+        settings.setString(sessionID, "ValidateDefinedFields", "N");
+        settings.setString(sessionID, "AllowUnknownMsgFields", "Y");
+        
+        return settings;
+    }
+
+    public void stopServer() throws Exception {
+        if (!serverRunning.get()) {
+            System.out.println("FIX Server is not running");
+            return;
+        }
+
+        try {
+            if (acceptor != null) {
+                acceptor.stop();
+                serverRunning.set(false);
+                System.out.println("FIX Server stopped at: " + LocalDateTime.now());
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to stop FIX server: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    // Stop server at 2:00 AM ET
+    @Scheduled(cron = "0 0 2 * * ?", zone = "America/New_York")
+    public void scheduledStop() {
+        try {
+            System.out.println("Scheduled stop initiated at 2:00 AM ET");
+            stopServer();
+        } catch (Exception e) {
+            System.err.println("Error during scheduled stop: " + e.getMessage());
+        }
+    }
+
+    // Start server at 2:10 AM ET
+    @Scheduled(cron = "0 10 2 * * ?", zone = "America/New_York")
+    public void scheduledStart() {
+        try {
+            System.out.println("Scheduled start initiated at 2:10 AM ET");
+            // Reset session sequence numbers
+            resetSessionSequenceNumbers();
+            startServer();
+        } catch (Exception e) {
+            System.err.println("Error during scheduled start: " + e.getMessage());
+        }
+    }
+
+    private void resetSessionSequenceNumbers() {
+        try {
+            if (settings != null) {
+                // only one session
+                SessionID sessionID = settings.sectionIterator().next();
+                Session session = Session.lookupSession(sessionID);
+                if (session != null) {
+                    session.reset();
+                    System.out.println("Reset session sequence numbers for: " + sessionID);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error resetting session sequence numbers: " + e.getMessage());
+        }
+    }
+
+    // QuickFIX Application interface methods
+    @Override
+    public void onCreate(SessionID sessionID) {
+        System.out.println("Session created: " + sessionID);
+    }
+
+    @Override
+    public void onLogon(SessionID sessionID) {
+        System.out.println("Logon: " + sessionID);
+    }
+
+    @Override
+    public void onLogout(SessionID sessionID) {
+        System.out.println("Logout: " + sessionID);
+    }
+
+    @Override
+    public void toAdmin(Message message, SessionID sessionID) {
+        System.out.println("ToAdmin: " + message);
+    }
+
+    @Override
+    public void fromAdmin(Message message, SessionID sessionID)
+            throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon {
+        System.out.println("FromAdmin: " + message);
+    }
+
+    @Override
+    public void toApp(Message message, SessionID sessionID) throws DoNotSend {
+        System.out.println("ToApp: " + message);
+    }
+
+    @Override
+    public void fromApp(Message message, SessionID sessionID)
+            throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
+        System.out.println("FromApp: " + message);
+
+        // Handle different message types
+        crack(message, sessionID);
+    }
+
+    // Example message handler for New Order Single
+    public void onMessage(NewOrderSingle message, SessionID sessionID)
+            throws FieldNotFound, UnsupportedMessageType, IncorrectTagValue {
+
+        System.out.println("Received New Order Single: " + message);
+
+        // Extract order details
+        String symbol = message.getSymbol().getValue();
+        Side side = message.getSide();
+        double quantity = message.getOrderQty().getValue();
+        String clOrdID = message.getClOrdID().getValue();
+
+        // Create ExecutionReport
+        ExecutionReport executionReport = new ExecutionReport(
+                new OrderID("ORDER_" + System.currentTimeMillis()),
+                new ExecID("EXEC_" + System.currentTimeMillis()),
+                new ExecType(ExecType.FILL),
+                new OrdStatus(OrdStatus.FILLED),
+                side,
+                new LeavesQty(0),
+                new CumQty(quantity)
+        );
+
+        executionReport.set(new ClOrdID(clOrdID));
+        executionReport.set(new Symbol(symbol));
+        executionReport.set(new OrderQty(quantity));
+        executionReport.set(new LastQty(quantity));
+        executionReport.set(new LastPx(77));
+
+        try {
+            Session.sendToTarget(executionReport, sessionID);
+            System.out.println("Sent execution report: " + executionReport);
+        } catch (SessionNotFound e) {
+            System.err.println("Session not found: " + e.getMessage());
+        }
+    }
+
+    // Helper method to crack messages
+    private void crack(Message message, SessionID sessionID)
+            throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, UnsupportedMessageType {
+
+        String msgType = message.getHeader().getString(MsgType.FIELD);
+
+        switch (msgType) {
+            case MsgType.NEW_ORDER_SINGLE:
+                onMessage((NewOrderSingle) message, sessionID);
+                break;
+            default:
+                System.out.println("Unhandled message type: " + msgType);
+        }
+    }
+}
