@@ -64,16 +64,16 @@ public class FixServerService implements Application {
         settings.setString("ReconnectInterval", "5");
         settings.setString("HeartBtInt", "30");
         settings.setString("ValidOrderTypes", "1,2,8,D,F,G");
-        settings.setString("SenderCompID", "SIMULATOR");
-        settings.setString("TargetCompID", "FBG-TEST");
+        settings.setString("SenderCompID", "SimulatorRT-MOCK");
+        settings.setString("TargetCompID", "FBG-MOCK-KALSHI-RT");
         settings.setString("DefaultMarketPrice", "77");
         settings.setString("ScreenLogLevels", "DEBUG");
         
         // Use your custom Kalshi dictionary instead of standard FIX dictionaries
         settings.setString("DataDictionary", "kalshi-fix.xml");
-        settings.setString("TransportDataDictionary", "kalshi-fix.xml");
-        settings.setString("AppDataDictionary", "kalshi-fix.xml");
-        
+        // settings.setString("AppDataDictionary", "kalshi-fix.xml");
+        settings.setString("TransportDataDictionary", "kalshi-FIXT11.xml");
+
         // Session-specific settings
         SessionID sessionID = new SessionID("FIXT.1.1", "SIMULATOR", "FBG-TEST");
         settings.setString(sessionID, "BeginString", "FIXT.1.1");
