@@ -196,10 +196,99 @@ public class WebSocketOrderbookIntegrationTest {
         // NO side should be empty as all orders are converted to YES
         assertTrue(noBook == null || noBook.isEmpty(), "NO orderbook should be empty");
         
+        // Step 5: Test that REST API updates trigger WebSocket updates
+        System.out.println("\n=== Testing REST update triggers WebSocket update ===");
+        
+        // Reset latch for next message
+        CountDownLatch updateLatch = new CountDownLatch(1);
+        AtomicReference<Map<String, Object>> orderbookUpdate = new AtomicReference<>();
+        
+        // Modify the client to capture updates
+        wsClient = new WebSocketClient(wsUri) {
+            @Override
+            public void onOpen(ServerHandshake handshake) {
+                // Already connected
+            }
+            
+            @Override
+            public void onMessage(String message) {
+                System.out.println("Update received: " + message);
+                try {
+                    Map<String, Object> msg = objectMapper.readValue(message, Map.class);
+                    
+                    if ("orderbook_snapshot".equals(msg.get("type"))) {
+                        // Check if this is a new snapshot (seq > 1)
+                        Integer seq = (Integer) msg.get("seq");
+                        if (seq != null && seq > 1) {
+                            orderbookUpdate.set((Map<String, Object>) msg.get("msg"));
+                            updateLatch.countDown();
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            
+            @Override
+            public void onClose(int code, String reason, boolean remote) {
+                System.out.println("Connection closed: " + reason);
+            }
+            
+            @Override
+            public void onError(Exception ex) {
+                System.err.println("WebSocket error: " + ex.getMessage());
+            }
+        };
+        
+        // Reconnect with the new handler
+        wsClient.close();
+        Thread.sleep(500);
+        wsClient.connect();
+        Thread.sleep(1000);
+        
+        // Subscribe again
+        Map<String, Object> subscribeCmd = new HashMap<>();
+        subscribeCmd.put("id", 2);
+        subscribeCmd.put("cmd", "subscribe");
+        
+        Map<String, Object> params = new HashMap<>();
+        params.put("channels", Arrays.asList("orderbook_snapshot"));
+        params.put("market_tickers", Arrays.asList(marketTicker));
+        subscribeCmd.put("params", params);
+        
+        wsClient.send(objectMapper.writeValueAsString(subscribeCmd));
+        Thread.sleep(1000); // Wait for subscription
+        
+        // Create a new order via REST that should trigger an update
+        System.out.println("\nCreating new order to trigger update...");
+        createOrder(marketTicker, "buy", "yes", 61, 100, "test-update-trigger");
+        
+        // Wait for WebSocket update
+        assertTrue(updateLatch.await(5, TimeUnit.SECONDS), "Failed to receive orderbook update after REST order");
+        
+        // Verify the update contains the new order
+        Map<String, Object> updatedOrderbook = orderbookUpdate.get();
+        assertNotNull(updatedOrderbook, "Updated orderbook should not be null");
+        
+        List<List<Integer>> updatedYesBook = (List<List<Integer>>) updatedOrderbook.get("yes");
+        System.out.println("\n=== UPDATED ORDERBOOK ===");
+        printOrderbookSide(updatedYesBook);
+        
+        // Check that price 61 now exists
+        boolean found61 = false;
+        for (List<Integer> level : updatedYesBook) {
+            if (level.get(0) == 61) {
+                found61 = true;
+                assertEquals(100, level.get(1), "New order at price 61 should have quantity 100");
+                break;
+            }
+        }
+        assertTrue(found61, "Updated orderbook should contain new order at price 61");
+        
         // Clean up
         wsClient.close();
         
-        System.out.println("\n✓ Integration test passed!");
+        System.out.println("\n✓ Integration test with updates passed!");
     }
     
     private void createOrder(String marketTicker, String action, String side, int price, int count, String clientOrderId) throws Exception {
