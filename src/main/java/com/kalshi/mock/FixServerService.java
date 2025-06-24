@@ -194,7 +194,7 @@ public class FixServerService implements Application {
     @Override
     public void onCreate(SessionID sessionID) {
         System.out.println("=== SESSION CREATED ===");
-        System.out.println("Expected SessionID: " + sessionID);
+        System.out.println("Expecting --> SessionID: " + sessionID);
         System.out.println("Server as: " + sessionID.getSenderCompID());
         System.out.println("Expecting client: " + sessionID.getTargetCompID());
         System.out.println("========================");

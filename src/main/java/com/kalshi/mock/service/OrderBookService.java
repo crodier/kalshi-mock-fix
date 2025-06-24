@@ -33,6 +33,7 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
         createOrderBook("INXD-23DEC29-B5000");
         createOrderBook("BTCZ-23DEC31-B50000");
         createOrderBook("TRUMPWIN-24NOV05");
+        createOrderBook("DUMMY_TEST");
     }
     
     private void createOrderBook(String marketTicker) {
