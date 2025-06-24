@@ -285,10 +285,100 @@ public class WebSocketOrderbookIntegrationTest {
         }
         assertTrue(found61, "Updated orderbook should contain new order at price 61");
         
-        // Clean up
-        wsClient.close();
+        // Step 6: Re-subscribe and verify we get the updated snapshot
+        System.out.println("\n=== Testing re-subscription gets current snapshot ===");
         
-        System.out.println("\n✓ Integration test with updates passed!");
+        // Close current connection
+        wsClient.close();
+        Thread.sleep(500);
+        
+        // Create new client and connect
+        CountDownLatch resubscribeLatch = new CountDownLatch(1);
+        AtomicReference<Map<String, Object>> resubscribeSnapshot = new AtomicReference<>();
+        
+        WebSocketClient resubscribeClient = new WebSocketClient(wsUri) {
+            @Override
+            public void onOpen(ServerHandshake handshake) {
+                System.out.println("Re-subscription client connected");
+                
+                // Subscribe to orderbook snapshot
+                try {
+                    Map<String, Object> subscribeCmd = new HashMap<>();
+                    subscribeCmd.put("id", 3);
+                    subscribeCmd.put("cmd", "subscribe");
+                    
+                    Map<String, Object> params = new HashMap<>();
+                    params.put("channels", Arrays.asList("orderbook_snapshot"));
+                    params.put("market_tickers", Arrays.asList(marketTicker));
+                    subscribeCmd.put("params", params);
+                    
+                    String json = objectMapper.writeValueAsString(subscribeCmd);
+                    System.out.println("Sending re-subscribe: " + json);
+                    send(json);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            
+            @Override
+            public void onMessage(String message) {
+                System.out.println("Re-subscribe received: " + message);
+                try {
+                    Map<String, Object> msg = objectMapper.readValue(message, Map.class);
+                    
+                    if ("orderbook_snapshot".equals(msg.get("type"))) {
+                        resubscribeSnapshot.set((Map<String, Object>) msg.get("msg"));
+                        resubscribeLatch.countDown();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            
+            @Override
+            public void onClose(int code, String reason, boolean remote) {
+                System.out.println("Re-subscribe client closed: " + reason);
+            }
+            
+            @Override
+            public void onError(Exception ex) {
+                System.err.println("Re-subscribe error: " + ex.getMessage());
+            }
+        };
+        
+        resubscribeClient.connect();
+        assertTrue(resubscribeLatch.await(5, TimeUnit.SECONDS), "Failed to receive snapshot on re-subscribe");
+        
+        // Verify the re-subscribe snapshot contains all our changes
+        Map<String, Object> finalSnapshot = resubscribeSnapshot.get();
+        assertNotNull(finalSnapshot, "Re-subscribe snapshot should not be null");
+        assertEquals(marketTicker, finalSnapshot.get("market_ticker"));
+        
+        List<List<Integer>> finalYesBook = (List<List<Integer>>) finalSnapshot.get("yes");
+        System.out.println("\n=== FINAL SNAPSHOT AFTER RE-SUBSCRIBE ===");
+        printOrderbookSide(finalYesBook);
+        
+        // Should now have 7 price levels (original 6 + new one at 61)
+        assertEquals(7, finalYesBook.size(), "Final snapshot should have 7 price levels");
+        
+        // Verify all expected prices are present
+        Set<Integer> finalPrices = new HashSet<>();
+        for (List<Integer> level : finalYesBook) {
+            finalPrices.add(level.get(0));
+        }
+        
+        assertTrue(finalPrices.contains(67), "Should still have price 67");
+        assertTrue(finalPrices.contains(65), "Should still have price 65");
+        assertTrue(finalPrices.contains(64), "Should still have price 64");
+        assertTrue(finalPrices.contains(62), "Should still have price 62");
+        assertTrue(finalPrices.contains(61), "Should have new price 61");
+        assertTrue(finalPrices.contains(60), "Should still have price 60");
+        assertTrue(finalPrices.contains(58), "Should still have price 58");
+        
+        // Clean up
+        resubscribeClient.close();
+        
+        System.out.println("\n✓ Integration test with updates and re-subscription passed!");
     }
     
     private void createOrder(String marketTicker, String action, String side, int price, int count, String clientOrderId) throws Exception {
