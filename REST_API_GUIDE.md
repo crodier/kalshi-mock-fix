@@ -2,11 +2,15 @@
 
 ## Overview
 
-This mock Kalshi REST API implements a concurrent order book system that handles YES/NO binary options markets. The API is available at `http://localhost:9090/trade-api/v2`.
+This mock Kalshi REST API implements a complete trading platform with catalog management (Series, Events, Markets), order management, and portfolio tracking. The API is available at `http://localhost:9090/trade-api/v2`.
 
 ## Swagger UI
 
-Access the interactive API documentation at: `http://localhost:9090/swagger-ui.html`
+Access the interactive API documentation at: `http://localhost:9090/swagger-ui/index.html`
+
+## Database
+
+The system uses PostgreSQL for persistent storage of all catalog data, orders, fills, and positions.
 
 ## Key Features
 
@@ -17,26 +21,78 @@ Access the interactive API documentation at: `http://localhost:9090/swagger-ui.h
 
 ## API Endpoints
 
-### Markets
+### Catalog Management
 
-#### Get All Markets
+#### Series
 ```bash
+# List all series
+GET /trade-api/v2/series
+
+# Get specific series
+GET /trade-api/v2/series/{series_ticker}
+
+# Create new series (admin)
+POST /trade-api/v2/series
+```
+
+#### Events
+```bash
+# List all events
+GET /trade-api/v2/events
+
+# Get specific event
+GET /trade-api/v2/events/{event_ticker}
+
+# Create new event (admin)
+POST /trade-api/v2/events
+```
+
+#### Markets
+```bash
+# List all markets
 GET /trade-api/v2/markets
-```
 
-Example:
-```bash
-curl http://localhost:9090/trade-api/v2/markets
-```
-
-#### Get Specific Market
-```bash
+# Get specific market
 GET /trade-api/v2/markets/{ticker}
+
+# Create new market (admin)
+POST /trade-api/v2/markets
 ```
 
-Example:
+Example - Create a complete catalog hierarchy:
 ```bash
-curl http://localhost:9090/trade-api/v2/markets/TRUMPWIN-24NOV05
+# 1. Create a series
+curl -X POST http://localhost:9090/trade-api/v2/series \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "ELECTION2024",
+    "frequency": "single",
+    "title": "2024 US Presidential Election",
+    "category": "politics"
+  }'
+
+# 2. Create an event within the series
+curl -X POST http://localhost:9090/trade-api/v2/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_ticker": "ELECTION2024-PRES",
+    "series_ticker": "ELECTION2024",
+    "title": "Presidential Winner",
+    "category": "politics",
+    "status": "open"
+  }'
+
+# 3. Create a market within the event
+curl -X POST http://localhost:9090/trade-api/v2/markets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ticker": "TRUMPWIN-24NOV05",
+    "event_ticker": "ELECTION2024-PRES",
+    "market_type": "binary",
+    "title": "Will Trump win the 2024 election?",
+    "open_time": "2024-01-01T00:00:00Z",
+    "close_time": "2024-11-05T23:59:59Z"
+  }'
 ```
 
 #### Get Order Book

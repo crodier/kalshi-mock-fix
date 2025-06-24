@@ -1,17 +1,17 @@
 # Persistence and Position Tracking Implementation
 
 ## Overview
-We've successfully implemented a complete persistence layer using SQLite and a concurrent position tracking system for the mock Kalshi trading platform.
+We've successfully implemented a complete persistence layer using PostgreSQL for the catalog system (Series, Events, Markets). Position tracking and order persistence are implemented in-memory with plans for PostgreSQL integration.
 
 ## Key Components
 
-### 1. SQLite Persistence Layer
-- **Database**: SQLite with file-based storage (configurable via `kalshi.database.path`)
+### 1. PostgreSQL Persistence Layer
+- **Database**: PostgreSQL with Docker support
 - **Tables**:
-  - `orders`: Stores all order details with full history
-  - `fills`: Records all trade executions
-  - `positions`: Tracks user positions by market and side
-  - `trades`: Public trade tape
+  - `series`: Market series catalog
+  - `events`: Events within series
+  - `markets`: Individual trading markets
+  - Additional tables for orders, fills, positions (to be implemented)
 
 ### 2. PersistenceService
 - Thread-safe database operations using Spring's `@Transactional`
@@ -41,44 +41,55 @@ We've successfully implemented a complete persistence layer using SQLite and a c
 
 ## Database Schema
 
-### Orders Table
+### Current PostgreSQL Tables
+
+#### Series Table
 ```sql
-CREATE TABLE orders (
-    id TEXT PRIMARY KEY,
-    client_order_id TEXT,
-    user_id TEXT NOT NULL,
-    side TEXT NOT NULL,          -- 'yes' or 'no'
-    symbol TEXT NOT NULL,
-    order_type TEXT NOT NULL,
-    quantity INTEGER NOT NULL,
-    filled_quantity INTEGER DEFAULT 0,
-    remaining_quantity INTEGER NOT NULL,
-    price INTEGER,
-    avg_fill_price INTEGER,
-    status TEXT NOT NULL,         -- 'open', 'filled', 'partially_filled', 'canceled'
-    time_in_force TEXT,
-    created_time BIGINT NOT NULL,
-    updated_time BIGINT NOT NULL,
-    expiration_time BIGINT,
-    action TEXT NOT NULL          -- 'buy' or 'sell'
-)
+CREATE TABLE series (
+    ticker VARCHAR(255) PRIMARY KEY,
+    frequency VARCHAR(50) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    category VARCHAR(100),
+    contract_url TEXT,
+    fee_type VARCHAR(20) DEFAULT 'quadratic',
+    fee_multiplier INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### Positions Table
+#### Events Table  
 ```sql
-CREATE TABLE positions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL,
-    market_id TEXT NOT NULL,
-    market_ticker TEXT NOT NULL,
-    quantity INTEGER NOT NULL DEFAULT 0,  -- Negative for short positions
-    avg_price INTEGER NOT NULL DEFAULT 0,
-    side TEXT NOT NULL,                   -- 'yes' or 'no'
-    realized_pnl INTEGER NOT NULL DEFAULT 0,
-    total_cost INTEGER NOT NULL DEFAULT 0,
-    updated_time BIGINT NOT NULL,
-    UNIQUE(user_id, market_ticker, side)
-)
+CREATE TABLE events (
+    event_ticker VARCHAR(255) PRIMARY KEY,
+    series_ticker VARCHAR(255) NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    category VARCHAR(100),
+    status VARCHAR(20) NOT NULL DEFAULT 'unopened',
+    mutually_exclusive BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (series_ticker) REFERENCES series(ticker) ON DELETE CASCADE
+);
+```
+
+#### Markets Table
+```sql
+CREATE TABLE markets (
+    ticker VARCHAR(255) PRIMARY KEY,
+    event_ticker VARCHAR(255) NOT NULL,
+    market_type VARCHAR(20) NOT NULL DEFAULT 'binary',
+    title VARCHAR(500) NOT NULL,
+    open_time BIGINT,
+    close_time BIGINT,
+    status VARCHAR(20) NOT NULL DEFAULT 'unopened',
+    yes_bid INTEGER,
+    yes_ask INTEGER,
+    volume BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_ticker) REFERENCES events(event_ticker) ON DELETE CASCADE
+);
 ```
 
 ## Test Coverage
@@ -180,13 +191,25 @@ curl -X POST http://localhost:9090/trade-api/v2/portfolio/orders \
 
 ## Configuration
 
-Set database location in `application.properties`:
-```properties
-# SQLite Database Configuration
-kalshi.database.path=kalshi-mock.db  # Default: creates file in current directory
+### PostgreSQL Configuration
+Set in `application.yml`:
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/kalshi_mock
+    username: kalshi
+    password: kalshi_dev_password
+    driver-class-name: org.postgresql.Driver
+```
 
-# Use in-memory database for testing
-kalshi.database.path=:memory:
+### Docker Configuration
+Use docker-compose for easy setup:
+```bash
+# Start PostgreSQL
+docker-compose up -d postgres
+
+# Start everything
+docker-compose up
 ```
 
 ## Next Steps
