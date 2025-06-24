@@ -6,6 +6,8 @@ import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import com.kalshi.mock.service.MatchingEngine;
 import com.kalshi.mock.service.MatchingEngine.Execution;
+import com.kalshi.mock.event.OrderBookEvent;
+import com.kalshi.mock.event.OrderBookEventPublisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +28,9 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
     
     @Autowired
     private PositionsService positionsService;
+    
+    @Autowired
+    private OrderBookEventPublisher eventPublisher;
     
     @PostConstruct
     private void initializeTestMarkets() {
@@ -230,12 +235,18 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
     public void onOrderAdded(String marketTicker, OrderBookEntry order) {
         // Log or process order addition
         System.out.println("Order added: " + order.getOrderId() + " to market " + marketTicker);
+        
+        // Publish order book delta event
+        publishOrderBookDelta(marketTicker);
     }
     
     @Override
     public void onOrderCanceled(String marketTicker, OrderBookEntry order) {
         // Log or process order cancellation
         System.out.println("Order canceled: " + order.getOrderId() + " from market " + marketTicker);
+        
+        // Publish order book delta event
+        publishOrderBookDelta(marketTicker);
     }
     
     @Override
@@ -281,6 +292,35 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
             (request.getPrice() == null || request.getPrice() < 1 || request.getPrice() > 99)) {
             throw new IllegalArgumentException("Limit orders require price between 1 and 99");
         }
+    }
+    
+    private void publishOrderBookDelta(String marketTicker) {
+        // For now, we'll publish a snapshot instead of tracking individual deltas
+        // In a real implementation, we would track the actual changes
+        publishOrderBookSnapshot(marketTicker);
+    }
+    
+    private void publishOrderBookSnapshot(String marketTicker) {
+        ConcurrentOrderBook orderBook = orderBooks.get(marketTicker);
+        if (orderBook == null) {
+            return;
+        }
+        
+        // Get current order book state using the snapshot method
+        Orderbook snapshot = orderBook.getOrderbookSnapshot(10); // Get top 10 levels
+        
+        // Convert to list format for WebSocket
+        List<List<Integer>> yesLevels = snapshot.getYes() != null ? snapshot.getYes() : new ArrayList<>();
+        List<List<Integer>> noLevels = snapshot.getNo() != null ? snapshot.getNo() : new ArrayList<>();
+        
+        // Publish snapshot event
+        OrderBookEvent.SnapshotData snapshotData = new OrderBookEvent.SnapshotData(yesLevels, noLevels);
+        OrderBookEvent event = new OrderBookEvent(OrderBookEvent.EventType.SNAPSHOT, marketTicker, snapshotData);
+        eventPublisher.publishEvent(event);
+    }
+    
+    public void publishInitialSnapshot(String marketTicker, String sessionId) {
+        publishOrderBookSnapshot(marketTicker);
     }
     
 }
