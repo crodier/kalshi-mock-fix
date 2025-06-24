@@ -1,0 +1,330 @@
+package com.kalshi.mock.model;
+
+import com.fbg.api.rest.Orderbook;
+import com.fbg.api.market.Side;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+
+/**
+ * Thread-safe concurrent order book implementation for Kalshi YES/NO markets.
+ * 
+ * Key features:
+ * - All NO orders are internally converted to YES equivalents
+ * - Maintains FIFO order priority at each price level
+ * - Detects both self-crosses and external crosses
+ * - Thread-safe using concurrent collections and read/write locks
+ */
+public class ConcurrentOrderBook {
+    private final String marketTicker;
+    
+    // Normalized order books (all converted to YES perspective)
+    // Bids are buy orders (sorted high to low)
+    private final ConcurrentSkipListMap<Integer, Queue<OrderBookEntry>> bids = 
+        new ConcurrentSkipListMap<>(Comparator.reverseOrder());
+    
+    // Asks are sell orders (sorted low to high)
+    private final ConcurrentSkipListMap<Integer, Queue<OrderBookEntry>> asks = 
+        new ConcurrentSkipListMap<>();
+    
+    // Order lookup by orderId
+    private final ConcurrentHashMap<String, OrderBookEntry> orderMap = new ConcurrentHashMap<>();
+    
+    // Lock for complex operations
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    
+    // Listeners for order book events
+    private final List<OrderBookListener> listeners = new ArrayList<>();
+    
+    public ConcurrentOrderBook(String marketTicker) {
+        this.marketTicker = marketTicker;
+    }
+    
+    /**
+     * Add a new order to the book
+     */
+    public boolean addOrder(OrderBookEntry order) {
+        lock.writeLock().lock();
+        try {
+            // Check if order already exists
+            if (orderMap.containsKey(order.getOrderId())) {
+                return false;
+            }
+            
+            // Check for crosses before adding
+            if (checkForCross(order)) {
+                notifyListeners(listener -> listener.onCrossDetected(marketTicker, order));
+            }
+            
+            // Add to appropriate side based on normalized values
+            ConcurrentSkipListMap<Integer, Queue<OrderBookEntry>> book = 
+                order.isNormalizedBuy() ? bids : asks;
+            
+            Queue<OrderBookEntry> priceLevel = book.computeIfAbsent(
+                order.getNormalizedPrice(), 
+                k -> new LinkedList<>()
+            );
+            
+            priceLevel.offer(order);
+            orderMap.put(order.getOrderId(), order);
+            
+            notifyListeners(listener -> listener.onOrderAdded(marketTicker, order));
+            return true;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Cancel an order
+     */
+    public boolean cancelOrder(String orderId) {
+        lock.writeLock().lock();
+        try {
+            OrderBookEntry order = orderMap.remove(orderId);
+            if (order == null) {
+                return false;
+            }
+            
+            // Remove from price level
+            ConcurrentSkipListMap<Integer, Queue<OrderBookEntry>> book = 
+                order.isNormalizedBuy() ? bids : asks;
+            
+            Queue<OrderBookEntry> priceLevel = book.get(order.getNormalizedPrice());
+            if (priceLevel != null) {
+                priceLevel.remove(order);
+                
+                // Clean up empty price levels
+                if (priceLevel.isEmpty()) {
+                    book.remove(order.getNormalizedPrice());
+                }
+            }
+            
+            notifyListeners(listener -> listener.onOrderCanceled(marketTicker, order));
+            return true;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    /**
+     * Get order by ID
+     */
+    public OrderBookEntry getOrder(String orderId) {
+        return orderMap.get(orderId);
+    }
+    
+    /**
+     * Get best bid (highest buy price)
+     */
+    public Map.Entry<Integer, Queue<OrderBookEntry>> getBestBid() {
+        lock.readLock().lock();
+        try {
+            return bids.firstEntry();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Get best ask (lowest sell price)
+     */
+    public Map.Entry<Integer, Queue<OrderBookEntry>> getBestAsk() {
+        lock.readLock().lock();
+        try {
+            return asks.firstEntry();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Remove a filled order from the order map
+     */
+    public void removeFilledOrder(String orderId) {
+        orderMap.remove(orderId);
+    }
+    
+    /**
+     * Remove empty ask level
+     */
+    public void removeEmptyAskLevel(int price) {
+        asks.remove(price);
+    }
+    
+    /**
+     * Remove empty bid level
+     */
+    public void removeEmptyBidLevel(int price) {
+        bids.remove(price);
+    }
+    
+    /**
+     * Notify listeners of order execution
+     */
+    public void notifyOrderExecuted(OrderBookEntry order, int executedQuantity) {
+        notifyListeners(listener -> listener.onOrderExecuted(marketTicker, order, executedQuantity));
+    }
+    
+    /**
+     * Get orderbook snapshot in Kalshi format
+     */
+    public Orderbook getOrderbookSnapshot(int depth) {
+        lock.readLock().lock();
+        try {
+            List<List<Integer>> yesBids = new ArrayList<>();
+            List<List<Integer>> yesAsks = new ArrayList<>();
+            List<List<Integer>> noBids = new ArrayList<>();
+            List<List<Integer>> noAsks = new ArrayList<>();
+            
+            // Aggregate orders by price level and convert back to YES/NO format
+            aggregateLevels(bids, true, depth, yesBids, yesAsks, noBids, noAsks);
+            aggregateLevels(asks, false, depth, yesBids, yesAsks, noBids, noAsks);
+            
+            return new Orderbook(
+                yesBids.isEmpty() ? null : yesBids,
+                noBids.isEmpty() ? null : noBids
+            );
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    /**
+     * Check for crosses (both self-cross and external cross)
+     */
+    private boolean checkForCross(OrderBookEntry newOrder) {
+        if (newOrder.isNormalizedBuy()) {
+            // Check if buy crosses with any ask
+            Map.Entry<Integer, Queue<OrderBookEntry>> bestAsk = asks.firstEntry();
+            if (bestAsk != null && newOrder.getNormalizedPrice() >= bestAsk.getKey()) {
+                return true; // Self-cross detected
+            }
+        } else {
+            // Check if sell crosses with any bid
+            Map.Entry<Integer, Queue<OrderBookEntry>> bestBid = bids.firstEntry();
+            if (bestBid != null && newOrder.getNormalizedPrice() <= bestBid.getKey()) {
+                return true; // Self-cross detected
+            }
+        }
+        
+        // Check for external cross after adding any order
+        // This needs to check if YES bid + NO bid > 100 (not >= 100)
+        return checkExternalCross();
+    }
+    
+    /**
+     * Check for external cross where YES bid + NO bid > 100
+     */
+    private boolean checkExternalCross() {
+        Map.Entry<Integer, Queue<OrderBookEntry>> bestBid = bids.firstEntry();
+        if (bestBid == null) return false;
+        
+        // Find best NO bid (which appears as YES ask from NO buy orders)
+        for (Map.Entry<Integer, Queue<OrderBookEntry>> askLevel : asks.entrySet()) {
+            for (OrderBookEntry order : askLevel.getValue()) {
+                if (order.getSide() == Side.no && order.getAction().equals("buy")) {
+                    int noBidPrice = order.getPrice();
+                    int yesBidPrice = bestBid.getKey();
+                    if (yesBidPrice + noBidPrice > 100) {
+                        return true; // External cross detected
+                    }
+                    break; // Only need to check the best NO bid
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Aggregate orders by price level and separate into YES/NO sides
+     */
+    private void aggregateLevels(
+            ConcurrentSkipListMap<Integer, Queue<OrderBookEntry>> book,
+            boolean isBidSide,
+            int maxLevels,
+            List<List<Integer>> yesBids,
+            List<List<Integer>> yesAsks,
+            List<List<Integer>> noBids,
+            List<List<Integer>> noAsks) {
+        
+        int levelCount = 0;
+        for (Map.Entry<Integer, Queue<OrderBookEntry>> level : book.entrySet()) {
+            if (levelCount >= maxLevels) break;
+            
+            // Aggregate by original side/action
+            Map<String, Integer> aggregated = new HashMap<>();
+            for (OrderBookEntry order : level.getValue()) {
+                String key = order.getSide() + "-" + order.getAction() + "-" + order.getPrice();
+                aggregated.merge(key, order.getQuantity(), Integer::sum);
+            }
+            
+            // Convert back to original YES/NO format
+            for (Map.Entry<String, Integer> entry : aggregated.entrySet()) {
+                String[] parts = entry.getKey().split("-");
+                Side side = Side.valueOf(parts[0]);
+                String action = parts[1];
+                int price = Integer.parseInt(parts[2]);
+                int quantity = entry.getValue();
+                
+                List<Integer> priceLevel = Arrays.asList(price, quantity);
+                
+                if (side == Side.yes) {
+                    if (action.equals("buy")) {
+                        yesBids.add(priceLevel);
+                    } else {
+                        yesAsks.add(priceLevel);
+                    }
+                } else { // NO side
+                    if (action.equals("buy")) {
+                        noBids.add(priceLevel);
+                    } else {
+                        noAsks.add(priceLevel);
+                    }
+                }
+            }
+            
+            levelCount++;
+        }
+        
+        // Sort the lists
+        yesBids.sort((a, b) -> b.get(0).compareTo(a.get(0))); // High to low
+        yesAsks.sort(Comparator.comparing(a -> a.get(0))); // Low to high
+        noBids.sort((a, b) -> b.get(0).compareTo(a.get(0))); // High to low
+        noAsks.sort(Comparator.comparing(a -> a.get(0))); // Low to high
+    }
+    
+    // Listener management
+    public void addListener(OrderBookListener listener) {
+        listeners.add(listener);
+    }
+    
+    public void removeListener(OrderBookListener listener) {
+        listeners.remove(listener);
+    }
+    
+    private void notifyListeners(java.util.function.Consumer<OrderBookListener> action) {
+        for (OrderBookListener listener : listeners) {
+            try {
+                action.accept(listener);
+            } catch (Exception e) {
+                // Log error but don't let one listener break others
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Interface for order book event listeners
+     */
+    public interface OrderBookListener {
+        void onOrderAdded(String marketTicker, OrderBookEntry order);
+        void onOrderCanceled(String marketTicker, OrderBookEntry order);
+        void onOrderExecuted(String marketTicker, OrderBookEntry order, int executedQuantity);
+        void onCrossDetected(String marketTicker, OrderBookEntry order);
+    }
+}
