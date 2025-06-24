@@ -184,9 +184,14 @@ public class ConcurrentOrderBook {
             aggregateLevels(bids, true, depth, yesBids, yesAsks, noBids, noAsks);
             aggregateLevels(asks, false, depth, yesBids, yesAsks, noBids, noAsks);
             
+            // Combine YES bids and asks into a single list
+            List<List<Integer>> yesOrderbook = new ArrayList<>();
+            yesOrderbook.addAll(yesBids);
+            yesOrderbook.addAll(yesAsks);
+            
             return new Orderbook(
-                yesBids.isEmpty() ? null : yesBids,
-                noBids.isEmpty() ? null : noBids
+                yesOrderbook.isEmpty() ? null : yesOrderbook,
+                null  // No longer returning NO side as per design
             );
         } finally {
             lock.readLock().unlock();
@@ -256,37 +261,24 @@ public class ConcurrentOrderBook {
         for (Map.Entry<Integer, Queue<OrderBookEntry>> level : book.entrySet()) {
             if (levelCount >= maxLevels) break;
             
-            // Aggregate by original side/action
-            Map<String, Integer> aggregated = new HashMap<>();
+            // Aggregate all orders at this normalized price level
+            int totalQuantity = 0;
             for (OrderBookEntry order : level.getValue()) {
-                String key = order.getSide() + "-" + order.getAction() + "-" + order.getPrice();
-                aggregated.merge(key, order.getQuantity(), Integer::sum);
+                totalQuantity += order.getQuantity();
             }
             
-            // Convert back to original YES/NO format
-            for (Map.Entry<String, Integer> entry : aggregated.entrySet()) {
-                String[] parts = entry.getKey().split("-");
-                Side side = Side.valueOf(parts[0]);
-                String action = parts[1];
-                int price = Integer.parseInt(parts[2]);
-                int quantity = entry.getValue();
-                
-                List<Integer> priceLevel = Arrays.asList(price, quantity);
-                
-                if (side == Side.yes) {
-                    if (action.equals("buy")) {
-                        yesBids.add(priceLevel);
-                    } else {
-                        yesAsks.add(priceLevel);
-                    }
-                } else { // NO side
-                    if (action.equals("buy")) {
-                        noBids.add(priceLevel);
-                    } else {
-                        noAsks.add(priceLevel);
-                    }
-                }
+            // All orders are shown as YES at their normalized price
+            int normalizedPrice = level.getKey();
+            List<Integer> priceLevel = Arrays.asList(normalizedPrice, totalQuantity);
+            
+            // Determine if this level is bid or ask based on the book it came from
+            if (isBidSide) {
+                yesBids.add(priceLevel);
+            } else {
+                yesAsks.add(priceLevel);
             }
+            
+            // We no longer populate NO sides as everything is normalized to YES
             
             levelCount++;
         }

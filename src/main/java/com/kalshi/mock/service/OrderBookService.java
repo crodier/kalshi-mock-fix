@@ -309,12 +309,11 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
         // Get current order book state using the snapshot method
         Orderbook snapshot = orderBook.getOrderbookSnapshot(10); // Get top 10 levels
         
-        // Convert to list format for WebSocket
+        // Convert to list format for WebSocket - only YES side as per design
         List<List<Integer>> yesLevels = snapshot.getYes() != null ? snapshot.getYes() : new ArrayList<>();
-        List<List<Integer>> noLevels = snapshot.getNo() != null ? snapshot.getNo() : new ArrayList<>();
         
-        // Publish snapshot event
-        OrderBookEvent.SnapshotData snapshotData = new OrderBookEvent.SnapshotData(yesLevels, noLevels);
+        // Publish snapshot event - only YES orderbook (NO orders are already converted)
+        OrderBookEvent.SnapshotData snapshotData = new OrderBookEvent.SnapshotData(yesLevels, new ArrayList<>());
         OrderBookEvent event = new OrderBookEvent(OrderBookEvent.EventType.SNAPSHOT, marketTicker, snapshotData);
         eventPublisher.publishEvent(event);
     }

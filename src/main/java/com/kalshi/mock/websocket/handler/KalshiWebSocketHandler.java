@@ -25,6 +25,9 @@ public class KalshiWebSocketHandler extends TextWebSocketHandler {
     @Autowired
     private ObjectMapper objectMapper;
     
+    @Autowired
+    private com.kalshi.mock.service.OrderBookService orderBookService;
+    
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     
     @Override
@@ -82,6 +85,15 @@ public class KalshiWebSocketHandler extends TextWebSocketHandler {
         response.setSubscriptions(subscriptions);
         
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+        
+        // Send initial snapshots for orderbook_snapshot subscriptions
+        if (command.getParams() != null && command.getParams().getChannels() != null 
+            && command.getParams().getChannels().contains("orderbook_snapshot")
+            && command.getParams().getMarketTickers() != null) {
+            for (String marketTicker : command.getParams().getMarketTickers()) {
+                orderBookService.publishInitialSnapshot(marketTicker, session.getId());
+            }
+        }
     }
     
     private void handleUnsubscribe(WebSocketSession session, Map<String, Object> payload, Integer id) throws IOException {
