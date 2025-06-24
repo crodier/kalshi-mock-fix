@@ -10,6 +10,8 @@ import quickfix.fix50sp2.NewOrderSingle;
 
 import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
@@ -52,32 +54,56 @@ public class FixServerService implements Application {
         }
     }
 
+
+
     private SessionSettings createHardCodedSessionSettings() throws ConfigError {
         SessionSettings settings = new SessionSettings();
         
         // Default section settings
 
         // settings.setString("FileLogPath", "logs");
+
+        // setString sets the "default" session settings
         settings.setString("ConnectionType", "acceptor");
-        settings.setString("StartTime", "07:10:00 UTC");
-        settings.setString("EndTime", "07:00:00 UTC");
+        // settings.setString("StartTime", "07:10:00 UTC");
+        // settings.setString("EndTime", "07:00:00 UTC");
+        settings.setString("StartTime", "00:00:00");
+        settings.setString("EndTime", "23:59:59");
         settings.setString("ReconnectInterval", "5");
         settings.setString("HeartBtInt", "30");
         settings.setString("ValidOrderTypes", "1,2,8,D,F,G");
-        settings.setString("SenderCompID", "SimulatorRT-MOCK");
-        settings.setString("TargetCompID", "FBG-MOCK-KALSHI-RT");
+
         settings.setString("DefaultMarketPrice", "77");
         settings.setString("ScreenLogLevels", "DEBUG");
         
         // Use your custom Kalshi dictionary instead of standard FIX dictionaries
-        settings.setString("DataDictionary", "kalshi-fix.xml");
+        // settings.setString("UseDataDictionary", "Y");
+        settings.setString("ValidateUserDefinedFields", "N");
+        settings.setString("AllowUnknownMsgFields", "Y");
+
+        // settings.setString("DataDictionary", "kalshi-fix.xml");
         // settings.setString("AppDataDictionary", "kalshi-fix.xml");
-        settings.setString("TransportDataDictionary", "kalshi-FIXT11.xml");
+        // settings.setString("TransportDataDictionary", "kalshi-FIXT11.xml");
+
+        settings.setString("DefaultApplVerID", "FIX.5.0SP2");
+
+        // Enhanced screen logging
+        settings.setString("ScreenLogLevels", "ALL");  // Changed from DEBUG to ALL
+        settings.setString("ScreenLogShowIncoming", "Y");
+        settings.setString("ScreenLogShowOutgoing", "Y");
+        settings.setString("ScreenLogShowEvents", "Y");
+
 
         // Session-specific settings
-        SessionID sessionID = new SessionID("FIXT.1.1", "SIMULATOR", "FBG-TEST");
+        // FIXT.1.1:FBG-MOCK-KALSHI-RT->SimulatorRT-MOCK
+        SessionID sessionID =
+                new SessionID("FIXT.1.1",
+                        "SimulatorRT-MOCK",
+                        "FBG-MOCK-KALSHI-RT");   // Changed: now expecting client as this
+
         settings.setString(sessionID, "BeginString", "FIXT.1.1");
-        settings.setString(sessionID, "DefaultApplVerID", "9");
+        // settings.setString(sessionID, "DefaultApplVerID", "FIX.5.0SP2");
+
         settings.setString(sessionID, "SocketAcceptPort", "9878");
         settings.setString(sessionID, "SocketAcceptAddress", "0.0.0.0");
         settings.setString(sessionID, "ValidateDefinedFields", "N");
@@ -144,31 +170,54 @@ public class FixServerService implements Application {
         }
     }
 
-    // QuickFIX Application interface methods
+    Map<String, SessionID> sessionIDMap = new ConcurrentHashMap<>();
+
+    // Add this method to your class
+    @Override
+    public void fromAdmin(Message message, SessionID sessionID)
+            throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon {
+        
+        System.out.println("=== ADMIN MESSAGE RECEIVED ===");
+        System.out.println("SessionID: " + sessionID);
+        System.out.println("Raw Message: " + message.toString());
+        try {
+            System.out.println("Message Type: " + message.getHeader().getString(MsgType.FIELD));
+            System.out.println("Sender: " + message.getHeader().getString(SenderCompID.FIELD));
+            System.out.println("Target: " + message.getHeader().getString(TargetCompID.FIELD));
+        } catch (Exception e) {
+            System.out.println("Error parsing message fields: " + e.getMessage());
+        }
+        System.out.println("===============================");
+    }
+
+    // Also add exception handling to onCreate
     @Override
     public void onCreate(SessionID sessionID) {
-        System.out.println("Session created: " + sessionID);
+        System.out.println("=== SESSION CREATED ===");
+        System.out.println("Expected SessionID: " + sessionID);
+        System.out.println("Server as: " + sessionID.getSenderCompID());
+        System.out.println("Expecting client: " + sessionID.getTargetCompID());
+        System.out.println("========================");
+        sessionIDMap.put(sessionID.toString(), sessionID);
     }
 
     @Override
     public void onLogon(SessionID sessionID) {
-        System.out.println("Logon: " + sessionID);
+        System.out.println("*** SUCCESSFUL LOGON ***");
+        System.out.println("SessionID: " + sessionID);
+        System.out.println("Time: " + LocalDateTime.now());
     }
 
     @Override
     public void onLogout(SessionID sessionID) {
-        System.out.println("Logout: " + sessionID);
+        System.out.println("*** LOGOUT ***");
+        System.out.println("SessionID: " + sessionID);
+        System.out.println("Time: " + LocalDateTime.now());
     }
 
     @Override
     public void toAdmin(Message message, SessionID sessionID) {
         System.out.println("ToAdmin: " + message);
-    }
-
-    @Override
-    public void fromAdmin(Message message, SessionID sessionID)
-            throws FieldNotFound, IncorrectDataFormat, IncorrectTagValue, RejectLogon {
-        System.out.println("FromAdmin: " + message);
     }
 
     @Override
@@ -184,6 +233,8 @@ public class FixServerService implements Application {
         // Handle different message types
         crack(message, sessionID);
     }
+
+
 
     // Example message handler for New Order Single
     public void onMessage(NewOrderSingle message, SessionID sessionID)
