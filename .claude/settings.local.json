@@ -1039,7 +1039,9 @@
       "Bash(git pull:*)",
       "Bash(git tag:*)",
       "Bash(npm start)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(node:*)"
     ],
     "deny": [
       "Bash(rm:*)",

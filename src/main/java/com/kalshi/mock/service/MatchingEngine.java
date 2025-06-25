@@ -4,14 +4,18 @@ import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import com.fbg.api.rest.*;
 import com.fbg.api.market.Side;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Matching engine that executes trades when orders cross in the order book.
  * All matching is done in the normalized YES order book space.
  */
+@Slf4j
 public class MatchingEngine {
     
     private final AtomicLong tradeIdGenerator = new AtomicLong(1);
@@ -21,12 +25,15 @@ public class MatchingEngine {
      * Attempt to match a new order against the order book
      * @return List of executions that occurred
      */
-    public List<Execution> matchOrder(OrderBookEntry incomingOrder, ConcurrentOrderBook orderBook) {
-        List<Execution> executions = new ArrayList<>();
-        
-        // Skip market orders with no price (for now)
+    public synchronized List<Execution> matchOrder(OrderBookEntry incomingOrder, ConcurrentOrderBook orderBook) {
+
+        // I'm making everything thread safe when likely not strictly necessary - just a mock - avoids thread safety issues
+        List<Execution> executions = new CopyOnWriteArrayList<>();
+
+        // Reject market orders
         if (incomingOrder.getNormalizedPrice() == 0) {
-            return executions;
+            log.info("Rejecting market order (must never send a market order!) " + incomingOrder);
+            throw new IllegalArgumentException("Market orders are not supported - price must be specified, is a market order: " + incomingOrder);
         }
         
         // Determine which side of the book to match against
@@ -41,6 +48,7 @@ public class MatchingEngine {
                 
                 // Check if we can match (buy price >= ask price)
                 if (bestLevel == null || incomingOrder.getNormalizedPrice() < bestLevel.getKey()) {
+                    log.info("No BUY match possible, bestLevel="+bestLevel+", incomingOrder="+incomingOrder);
                     break; // No match possible
                 }
             } else {
@@ -49,12 +57,16 @@ public class MatchingEngine {
                 
                 // Check if we can match (sell price <= bid price)
                 if (bestLevel == null || incomingOrder.getNormalizedPrice() > bestLevel.getKey()) {
+                    log.info("No SELL match possible, bestLevel="+bestLevel+", incomingOrder="+incomingOrder);
                     break; // No match possible
                 }
             }
             
             // Match against orders at the best level
             Queue<OrderBookEntry> ordersAtLevel = bestLevel.getValue();
+
+            log.info("Matching against level " + bestLevel.getKey() + ", orders=" + ordersAtLevel);
+
             Iterator<OrderBookEntry> iterator = ordersAtLevel.iterator();
             
             while (iterator.hasNext() && incomingOrder.getQuantity() > 0) {
@@ -79,7 +91,9 @@ public class MatchingEngine {
                     executionPrice,
                     System.currentTimeMillis()
                 );
-                
+
+                log.info("Order incoming is MATCHED and EXECUTION being generated, orderID and quantity: "+incomingOrder+", Execution is: "+execution);
+
                 executions.add(execution);
                 
                 // Update quantities
@@ -180,6 +194,7 @@ public class MatchingEngine {
     /**
      * Execution record containing details of a matched trade
      */
+    @ToString
     public static class Execution {
         private final String tradeId;
         private final OrderBookEntry aggressor;

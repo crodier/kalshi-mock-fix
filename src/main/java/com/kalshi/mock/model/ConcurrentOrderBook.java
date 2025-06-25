@@ -2,6 +2,7 @@ package com.kalshi.mock.model;
 
 import com.fbg.api.rest.Orderbook;
 import com.fbg.api.market.Side;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  * - Detects both self-crosses and external crosses
  * - Thread-safe using concurrent collections and read/write locks
  */
+@Slf4j
 public class ConcurrentOrderBook {
     private final String marketTicker;
     
@@ -305,8 +307,9 @@ public class ConcurrentOrderBook {
         for (OrderBookListener listener : listeners) {
             try {
                 action.accept(listener);
+                log.info("Notified listener "+listener+" of order book event for market "+marketTicker+" (thread "+Thread.currentThread().getName()+")");
             } catch (Exception e) {
-                System.out.println("Listener notify failed; maybe it is gone? "+e.getMessage());
+                log.info("Listener notify failed; maybe it is gone? "+e.getMessage());
                 // Log error but don't let one listener break others
                 // e.printStackTrace();
             }

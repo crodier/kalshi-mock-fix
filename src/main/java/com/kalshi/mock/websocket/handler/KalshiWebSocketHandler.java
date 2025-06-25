@@ -14,6 +14,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class KalshiWebSocketHandler extends TextWebSocketHandler {
     
@@ -67,7 +68,7 @@ public class KalshiWebSocketHandler extends TextWebSocketHandler {
     private void handleSubscribe(WebSocketSession session, Map<String, Object> payload, Integer id) throws IOException {
         SubscribeCommand command = objectMapper.convertValue(payload, SubscribeCommand.class);
         
-        List<SubscriptionResponse.Subscription> subscriptions = new ArrayList<>();
+        List<SubscriptionResponse.Subscription> subscriptions = new CopyOnWriteArrayList<>();
         
         if (command.getParams() != null && command.getParams().getChannels() != null) {
             for (String channel : command.getParams().getChannels()) {

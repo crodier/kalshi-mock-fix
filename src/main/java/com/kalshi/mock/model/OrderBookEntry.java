@@ -1,25 +1,42 @@
 package com.kalshi.mock.model;
 
 import com.fbg.api.market.Side;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents a single order in the order book
  */
+@ToString
+@Slf4j
 public class OrderBookEntry {
     private static final AtomicLong SEQUENCE_GENERATOR = new AtomicLong(0);
-    
+
+    // Getters
+    @Getter
     private final String orderId;
+    @Getter
     private final String userId;
+    @Getter
     private final Side side;  // YES or NO
+    @Getter
     private final String action; // buy or sell
+    @Getter
     private final int price; // in cents
+    @Getter
     private volatile int quantity;
+    @Getter
     private final int originalQuantity;
+    @Getter
     private final long timestamp;
+    @Getter
     private final long sequence; // for FIFO ordering
     
     // Normalized values for internal order book representation
+    @Getter
     private final int normalizedPrice;
     private final boolean normalizedIsBuy;
     
@@ -59,20 +76,17 @@ public class OrderBookEntry {
     }
     
     public void reduceQuantity(int amount) {
-        this.quantity = Math.max(0, this.quantity - amount);
+        if (amount > quantity) {
+            log.error("Attempted to reduce quantity by " + amount + " from " + quantity + " for order " + orderId + ", ignoring request");
+            throw new RuntimeException("Attempted to reduce quantity by " + amount + " from " + quantity + " for order " + orderId + ", ignoring request");
+        }
+
+        int newQty = quantity - amount;
+        log.info("Reducing quantity for order " + orderId + " by " + amount + " to " + newQty+", due to execution.");
+
+        this.quantity = newQty;
     }
-    
-    // Getters
-    public String getOrderId() { return orderId; }
-    public String getUserId() { return userId; }
-    public Side getSide() { return side; }
-    public String getAction() { return action; }
-    public int getPrice() { return price; }
-    public int getQuantity() { return quantity; }
-    public int getOriginalQuantity() { return originalQuantity; }
-    public long getTimestamp() { return timestamp; }
-    public long getSequence() { return sequence; }
-    public int getNormalizedPrice() { return normalizedPrice; }
+
     public boolean isNormalizedBuy() { return normalizedIsBuy; }
     
     public int getFilledQuantity() {
