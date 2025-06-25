@@ -104,7 +104,7 @@ const OrderBook = ({ marketTicker }) => {
       <h3>Order Book - {marketTicker}</h3>
       <div className="orderbook-container">
         <div className="orderbook-side bids">
-          <h4>Bids (Buy)</h4>
+          <h4>Yes (Buy)</h4>
           <div className="orderbook-header">
             <span>Price</span>
             <span>Quantity</span>
@@ -123,7 +123,7 @@ const OrderBook = ({ marketTicker }) => {
         </div>
         
         <div className="orderbook-side asks">
-          <h4>Asks (Sell)</h4>
+          <h4>No (Buy)</h4>
           <div className="orderbook-header">
             <span>Price</span>
             <span>Quantity</span>
