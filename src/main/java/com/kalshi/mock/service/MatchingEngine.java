@@ -3,7 +3,7 @@ package com.kalshi.mock.service;
 import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import com.fbg.api.rest.*;
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,8 +18,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 public class MatchingEngine {
     
-    private final AtomicLong tradeIdGenerator = new AtomicLong(1);
-    private final AtomicLong fillIdGenerator = new AtomicLong(1);
+    private final AtomicLong tradeIdGenerator = new AtomicLong(System.currentTimeMillis() + 100000L);
+    private final AtomicLong fillIdGenerator = new AtomicLong(System.currentTimeMillis() + 100000L);
     
     /**
      * Attempt to match a new order against the order book
@@ -134,7 +134,7 @@ public class MatchingEngine {
             OrderBookEntry aggressor = exec.getAggressor();
             
             // Convert back to original YES/NO representation for public trade
-            Side tradeSide = aggressor.getSide();
+            KalshiSide tradeSide = aggressor.getSide();
             int tradePrice = aggressor.getPrice();
             
             Trade trade = new Trade(

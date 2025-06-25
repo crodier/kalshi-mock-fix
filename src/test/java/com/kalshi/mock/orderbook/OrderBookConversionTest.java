@@ -1,6 +1,6 @@
 package com.kalshi.mock.orderbook;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.kalshi.mock.model.OrderBookEntry;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -22,7 +22,7 @@ public class OrderBookConversionTest {
         OrderBookEntry order = new OrderBookEntry(
             "ORDER-1",
             "USER-1",
-            Side.no,
+            KalshiSide.no,
             "buy",
             35,
             100,
@@ -41,7 +41,7 @@ public class OrderBookConversionTest {
         OrderBookEntry order = new OrderBookEntry(
             "ORDER-2",
             "USER-1",
-            Side.no,
+            KalshiSide.no,
             "sell",
             35,
             100,
@@ -60,7 +60,7 @@ public class OrderBookConversionTest {
         OrderBookEntry order = new OrderBookEntry(
             "ORDER-3",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "buy",
             65,
             100,
@@ -79,7 +79,7 @@ public class OrderBookConversionTest {
         OrderBookEntry order = new OrderBookEntry(
             "ORDER-4",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "sell",
             65,
             100,
@@ -101,7 +101,7 @@ public class OrderBookConversionTest {
             OrderBookEntry buyNO = new OrderBookEntry(
                 "ORDER-" + noPrice,
                 "USER-1",
-                Side.no,
+                KalshiSide.no,
                 "buy",
                 noPrice,
                 100,
@@ -120,7 +120,7 @@ public class OrderBookConversionTest {
         OrderBookEntry order = new OrderBookEntry(
             "ORDER-5",
             "USER-1",
-            Side.no,
+            KalshiSide.no,
             "buy",
             1,
             100,
@@ -137,7 +137,7 @@ public class OrderBookConversionTest {
         OrderBookEntry order = new OrderBookEntry(
             "ORDER-6",
             "USER-1",
-            Side.no,
+            KalshiSide.no,
             "buy",
             99,
             100,
@@ -155,7 +155,7 @@ public class OrderBookConversionTest {
             new OrderBookEntry(
                 "ORDER-7",
                 "USER-1",
-                Side.yes,
+                KalshiSide.yes,
                 "buy",
                 0,
                 100,
@@ -171,7 +171,7 @@ public class OrderBookConversionTest {
             new OrderBookEntry(
                 "ORDER-8",
                 "USER-1",
-                Side.yes,
+                KalshiSide.yes,
                 "buy",
                 100,
                 100,
@@ -187,7 +187,7 @@ public class OrderBookConversionTest {
         OrderBookEntry buyNO35 = new OrderBookEntry(
             "ORDER-9",
             "USER-1",
-            Side.no,
+            KalshiSide.no,
             "buy",
             35,
             100,
@@ -197,7 +197,7 @@ public class OrderBookConversionTest {
         OrderBookEntry sellYES65 = new OrderBookEntry(
             "ORDER-10",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "sell",
             65,
             100,

@@ -59,30 +59,30 @@ const OrderBook = ({ marketTicker }) => {
   };
 
   const processOrderbook = (orderbookData) => {
-    // The API returns YES side only with all orders normalized
-    // Structure: [[price, quantity], ...]
-    const yesBook = orderbookData.yes || [];
+    // The API now returns data in Kalshi format with separated YES and NO sides
+    // Structure: {"yes": [[price, quantity], ...], "no": [[price, quantity], ...]}
+    // YES side contains Buy YES orders (bids)
+    // NO side contains Buy NO orders
     
-    // Separate bids and asks based on the context from tests
-    // In the normalized YES book, higher prices are typically bids (buyers)
-    // and lower prices are asks (sellers)
     const bids = [];
     const asks = [];
     
-    // Sort the orderbook by price
-    const sortedBook = [...yesBook].sort((a, b) => b[0] - a[0]);
-    
-    // Simple heuristic: split at the middle or find the gap
-    // In a real implementation, we'd need more context or a spread indicator
-    sortedBook.forEach((level) => {
+    // Process YES side (Buy YES orders) - these are bids
+    const yesOrders = orderbookData.yes || [];
+    yesOrders.forEach((level) => {
       const [price, quantity] = level;
-      // For now, we'll consider prices > 50 as likely bids and <= 50 as asks
-      // This is a simplification - in production, we'd need better logic
-      if (price > 50) {
-        bids.push({ price, quantity });
-      } else {
-        asks.push({ price, quantity });
-      }
+      bids.push({ price, quantity });
+    });
+    
+    // Process NO side (Buy NO orders)
+    // Note: Buy NO at price X is equivalent to Sell YES at price (100-X)
+    // So we display these as asks
+    const noOrders = orderbookData.no || [];
+    noOrders.forEach((level) => {
+      const [noPrice, quantity] = level;
+      // Convert NO price to equivalent YES price for display
+      const yesPrice = 100 - noPrice;
+      asks.push({ price: yesPrice, quantity });
     });
 
     // Sort bids descending (highest first) and asks ascending (lowest first)

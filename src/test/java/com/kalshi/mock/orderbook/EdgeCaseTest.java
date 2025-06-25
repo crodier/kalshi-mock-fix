@@ -1,6 +1,6 @@
 package com.kalshi.mock.orderbook;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import com.kalshi.mock.service.MatchingEngine;
@@ -32,26 +32,26 @@ public class EdgeCaseTest {
     @DisplayName("Orders at price boundaries (1¢ and 99¢)")
     public void testPriceBoundaries() {
         // Test 1¢ price
-        OrderBookEntry order1Cent = new OrderBookEntry("O1", "U1", Side.yes, "buy", 1, 100, 1000);
+        OrderBookEntry order1Cent = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 1, 100, 1000);
         assertTrue(orderBook.addOrder(order1Cent));
         assertEquals(1, order1Cent.getPrice());
         assertEquals(1, order1Cent.getNormalizedPrice());
         
         // Test 99¢ price
-        OrderBookEntry order99Cent = new OrderBookEntry("O2", "U2", Side.yes, "sell", 99, 100, 2000);
+        OrderBookEntry order99Cent = new OrderBookEntry("O2", "U2", KalshiSide.yes, "sell", 99, 100, 2000);
         assertTrue(orderBook.addOrder(order99Cent));
         assertEquals(99, order99Cent.getPrice());
         assertEquals(99, order99Cent.getNormalizedPrice());
         
         // Test NO at 1¢ (converts to Sell YES at 99¢)
-        OrderBookEntry no1Cent = new OrderBookEntry("O3", "U3", Side.no, "buy", 1, 100, 3000);
+        OrderBookEntry no1Cent = new OrderBookEntry("O3", "U3", KalshiSide.no, "buy", 1, 100, 3000);
         assertTrue(orderBook.addOrder(no1Cent));
         assertEquals(1, no1Cent.getPrice());
         assertEquals(99, no1Cent.getNormalizedPrice());
         assertFalse(no1Cent.isNormalizedBuy());
         
         // Test NO at 99¢ (converts to Sell YES at 1¢)
-        OrderBookEntry no99Cent = new OrderBookEntry("O4", "U4", Side.no, "buy", 99, 100, 4000);
+        OrderBookEntry no99Cent = new OrderBookEntry("O4", "U4", KalshiSide.no, "buy", 99, 100, 4000);
         assertTrue(orderBook.addOrder(no99Cent));
         assertEquals(99, no99Cent.getPrice());
         assertEquals(1, no99Cent.getNormalizedPrice());
@@ -62,8 +62,8 @@ public class EdgeCaseTest {
     @DisplayName("Maximum arbitrage: YES bid 99¢ + NO bid 99¢ = 198¢")
     public void testMaximumArbitrage() {
         // This is the theoretical maximum arbitrage opportunity
-        orderBook.addOrder(new OrderBookEntry("Y1", "U1", Side.yes, "buy", 99, 100, 1000));
-        orderBook.addOrder(new OrderBookEntry("N1", "U2", Side.no, "buy", 99, 100, 2000));
+        orderBook.addOrder(new OrderBookEntry("Y1", "U1", KalshiSide.yes, "buy", 99, 100, 1000));
+        orderBook.addOrder(new OrderBookEntry("N1", "U2", KalshiSide.no, "buy", 99, 100, 2000));
         
         // Market maker could collect 198¢ and pay out max 100¢ = 98¢ profit per contract!
         // In reality, this would never happen due to market forces
@@ -77,7 +77,7 @@ public class EdgeCaseTest {
             orderBook.addOrder(new OrderBookEntry(
                 "BUY-" + i, 
                 "USER-" + i, 
-                Side.yes, 
+                KalshiSide.yes, 
                 "buy", 
                 50, 
                 100 * i, // Increasing quantities
@@ -86,7 +86,7 @@ public class EdgeCaseTest {
         }
         
         // Match with a large sell order
-        OrderBookEntry largeSell = new OrderBookEntry("SELL-1", "U11", Side.yes, "sell", 50, 2000, 11000);
+        OrderBookEntry largeSell = new OrderBookEntry("SELL-1", "U11", KalshiSide.yes, "sell", 50, 2000, 11000);
         List<Execution> executions = matchingEngine.matchOrder(largeSell, orderBook);
         
         // Should match in FIFO order
@@ -115,7 +115,7 @@ public class EdgeCaseTest {
         assertFalse(orderBook.cancelOrder("NON-EXISTENT"));
         
         // Test matching against empty book
-        OrderBookEntry testOrder = new OrderBookEntry("O1", "U1", Side.yes, "buy", 50, 100, 1000);
+        OrderBookEntry testOrder = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 50, 100, 1000);
         List<Execution> executions = matchingEngine.matchOrder(testOrder, orderBook);
         assertTrue(executions.isEmpty());
     }
@@ -126,9 +126,9 @@ public class EdgeCaseTest {
         long timestamp = System.currentTimeMillis();
         
         // Create orders with identical timestamps
-        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", Side.yes, "buy", 60, 100, timestamp);
-        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", Side.yes, "buy", 60, 100, timestamp);
-        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", Side.yes, "buy", 60, 100, timestamp);
+        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 60, 100, timestamp);
+        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", KalshiSide.yes, "buy", 60, 100, timestamp);
+        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", KalshiSide.yes, "buy", 60, 100, timestamp);
         
         // Sequence numbers should still maintain order
         assertTrue(order1.getSequence() < order2.getSequence());
@@ -139,7 +139,7 @@ public class EdgeCaseTest {
         orderBook.addOrder(order3);
         
         // Match and verify FIFO based on sequence
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", Side.yes, "sell", 60, 250, timestamp + 1);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", KalshiSide.yes, "sell", 60, 250, timestamp + 1);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         assertEquals(3, executions.size());
@@ -154,25 +154,25 @@ public class EdgeCaseTest {
         // Test all combinations: Buy YES, Sell YES, Buy NO, Sell NO
         
         // Buy YES at 70¢
-        OrderBookEntry buyYes = new OrderBookEntry("BY", "U1", Side.yes, "buy", 70, 100, 1000);
+        OrderBookEntry buyYes = new OrderBookEntry("BY", "U1", KalshiSide.yes, "buy", 70, 100, 1000);
         assertTrue(orderBook.addOrder(buyYes));
         assertEquals(70, buyYes.getNormalizedPrice());
         assertTrue(buyYes.isNormalizedBuy());
         
         // Sell YES at 75¢
-        OrderBookEntry sellYes = new OrderBookEntry("SY", "U2", Side.yes, "sell", 75, 100, 2000);
+        OrderBookEntry sellYes = new OrderBookEntry("SY", "U2", KalshiSide.yes, "sell", 75, 100, 2000);
         assertTrue(orderBook.addOrder(sellYes));
         assertEquals(75, sellYes.getNormalizedPrice());
         assertFalse(sellYes.isNormalizedBuy());
         
         // Buy NO at 25¢ (converts to Sell YES at 75¢)
-        OrderBookEntry buyNo = new OrderBookEntry("BN", "U3", Side.no, "buy", 25, 100, 3000);
+        OrderBookEntry buyNo = new OrderBookEntry("BN", "U3", KalshiSide.no, "buy", 25, 100, 3000);
         assertTrue(orderBook.addOrder(buyNo));
         assertEquals(75, buyNo.getNormalizedPrice());
         assertFalse(buyNo.isNormalizedBuy());
         
         // Sell NO at 30¢ (converts to Buy YES at 70¢)
-        OrderBookEntry sellNo = new OrderBookEntry("SN", "U4", Side.no, "sell", 30, 100, 4000);
+        OrderBookEntry sellNo = new OrderBookEntry("SN", "U4", KalshiSide.no, "sell", 30, 100, 4000);
         assertTrue(orderBook.addOrder(sellNo));
         assertEquals(70, sellNo.getNormalizedPrice());
         assertTrue(sellNo.isNormalizedBuy());
@@ -189,7 +189,7 @@ public class EdgeCaseTest {
     @DisplayName("Cancel non-existent order returns false")
     public void testCancelNonExistentOrder() {
         // Add an order
-        orderBook.addOrder(new OrderBookEntry("O1", "U1", Side.yes, "buy", 50, 100, 1000));
+        orderBook.addOrder(new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 50, 100, 1000));
         
         // Try to cancel non-existent order
         assertFalse(orderBook.cancelOrder("O2"));
@@ -204,12 +204,12 @@ public class EdgeCaseTest {
         // Same user places multiple orders at same price
         String userId = "USER-1";
         
-        orderBook.addOrder(new OrderBookEntry("O1", userId, Side.yes, "buy", 60, 100, 1000));
-        orderBook.addOrder(new OrderBookEntry("O2", userId, Side.yes, "buy", 60, 200, 2000));
-        orderBook.addOrder(new OrderBookEntry("O3", userId, Side.yes, "buy", 60, 300, 3000));
+        orderBook.addOrder(new OrderBookEntry("O1", userId, KalshiSide.yes, "buy", 60, 100, 1000));
+        orderBook.addOrder(new OrderBookEntry("O2", userId, KalshiSide.yes, "buy", 60, 200, 2000));
+        orderBook.addOrder(new OrderBookEntry("O3", userId, KalshiSide.yes, "buy", 60, 300, 3000));
         
         // Match against them
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U2", Side.yes, "sell", 60, 350, 4000);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U2", KalshiSide.yes, "sell", 60, 350, 4000);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         // Should still maintain FIFO regardless of same user

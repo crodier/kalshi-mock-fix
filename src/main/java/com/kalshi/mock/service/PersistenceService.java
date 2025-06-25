@@ -1,6 +1,6 @@
 package com.kalshi.mock.service;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.fbg.api.rest.Fill;
 import com.fbg.api.rest.Order;
 import com.fbg.api.rest.Position;
@@ -30,7 +30,7 @@ public class PersistenceService {
                 rs.getString("order_id"),
                 rs.getString("client_order_id"),
                 rs.getString("user_id"),
-                Side.valueOf(rs.getString("side")),
+                KalshiSide.valueOf(rs.getString("side")),
                 rs.getString("market_ticker"),  // symbol field maps to market_ticker column
                 rs.getString("order_type"),
                 rs.getInt("quantity"),
@@ -56,7 +56,7 @@ public class PersistenceService {
                 rs.getString("order_id"),
                 rs.getString("market_id"),
                 rs.getString("market_ticker"),
-                Side.valueOf(rs.getString("side")),
+                KalshiSide.valueOf(rs.getString("side")),
                 rs.getInt("price"),
                 rs.getInt("quantity"),  // count field maps to quantity column
                 rs.getBoolean("is_taker"),
@@ -75,7 +75,7 @@ public class PersistenceService {
                 rs.getString("market_ticker"),
                 rs.getInt("quantity"),
                 rs.getInt("avg_price"),
-                Side.valueOf(rs.getString("side")),
+                KalshiSide.valueOf(rs.getString("side")),
                 rs.getInt("realized_pnl"),
                 rs.getInt("total_cost")
             );
@@ -233,7 +233,7 @@ public class PersistenceService {
     // Position operations
     @Transactional
     public void updatePosition(String userId, String marketId, String marketTicker, 
-                              Side side, int quantityChange, int price) {
+                              KalshiSide side, int quantityChange, int price) {
         // First try to get existing position
         String selectSql = """
             SELECT quantity, avg_price, total_cost 
@@ -315,7 +315,7 @@ public class PersistenceService {
         return jdbcTemplate.query(sql, positionRowMapper, userId);
     }
     
-    public Position getUserPosition(String userId, String marketTicker, Side side) {
+    public Position getUserPosition(String userId, String marketTicker, KalshiSide side) {
         String sql = """
             SELECT * FROM positions 
             WHERE user_id = ? AND market_ticker = ? AND side = ?

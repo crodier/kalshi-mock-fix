@@ -3,6 +3,7 @@ package com.kalshi.mock.catalog.controller;
 import com.kalshi.mock.catalog.service.MarketDataService;
 import com.kalshi.mock.catalog.service.MarketService;
 import com.kalshi.mock.catalog.dto.CursorUtil;
+import com.kalshi.mock.dto.OrderbookResponse;
 import com.fbg.api.rest.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,10 +47,10 @@ public class MarketDataController {
             // Verify market exists
             marketService.getMarketByTicker(ticker);
             
-            // Get orderbook from market data service
-            Orderbook orderbook = marketDataService.getMarketOrderbook(ticker, depth);
+            // Get orderbook from market data service in Kalshi format
+            OrderbookResponse.OrderbookData orderbookData = marketDataService.getMarketOrderbookKalshiFormat(ticker, depth);
             
-            return ResponseEntity.ok(new OrderbookResponse(orderbook));
+            return ResponseEntity.ok(new OrderbookResponse(orderbookData));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         } catch (Exception e) {

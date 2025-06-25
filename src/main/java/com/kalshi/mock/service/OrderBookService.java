@@ -1,13 +1,17 @@
 package com.kalshi.mock.service;
 
 import com.fbg.api.rest.*;
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
+import com.fbg.api.market.KalshiAction;
+import com.kalshi.mock.dto.OrderbookResponse;
 import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import com.kalshi.mock.service.MatchingEngine;
 import com.kalshi.mock.service.MatchingEngine.Execution;
 import com.kalshi.mock.event.OrderBookEvent;
 import com.kalshi.mock.event.OrderBookEventPublisher;
+import com.kalshi.mock.converter.YesNoConverter;
+import com.kalshi.mock.converter.YesNoConverter.ConvertedOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -62,7 +66,7 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
             OrderBookEntry bookEntry = new OrderBookEntry(
                 (String) orderData.get("order_id"),
                 (String) orderData.get("user_id"),
-                Side.valueOf((String) orderData.get("side")),
+                KalshiSide.valueOf((String) orderData.get("side")),
                 (String) orderData.get("action"), // Get action directly from DB
                 (Integer) orderData.get("price"),
                 (Integer) orderData.get("remaining_quantity"),
@@ -92,13 +96,29 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
         String orderId = "ORD-" + orderIdGenerator.incrementAndGet();
         long timestamp = System.currentTimeMillis();
         
-        // Create order book entry
+        // Convert to buy-only format using YesNoConverter
+        ConvertedOrder converted = YesNoConverter.convertToBuyOnly(
+            request.getSide(),
+            KalshiAction.valueOf(action),
+            request.getPrice() != null ? request.getPrice() : 0
+        );
+        
+        // Log conversion if it occurred
+        if (converted.isWasConverted()) {
+            System.out.println("Order converted: " + converted.toDebugString(
+                request.getSide(), 
+                KalshiAction.valueOf(action), 
+                request.getPrice()
+            ));
+        }
+        
+        // Create order book entry with converted values
         OrderBookEntry bookEntry = new OrderBookEntry(
             orderId,
             userId,
-            request.getSide(),
-            action, // Use the provided action
-            request.getPrice() != null ? request.getPrice() : 0,
+            converted.getSide(),
+            converted.getAction().name(), // Convert enum back to string
+            converted.getPrice(),
             request.getQuantity(),
             timestamp
         );
@@ -262,6 +282,16 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
         return orderBook.getOrderbookSnapshot(10);
     }
     
+    public OrderbookResponse.OrderbookData getOrderbookKalshiFormat(String marketTicker, int depth) {
+        ConcurrentOrderBook orderBook = orderBooks.get(marketTicker);
+        if (orderBook == null) {
+            return new OrderbookResponse.OrderbookData(new ArrayList<>(), new ArrayList<>());
+        }
+        
+        // Get orderbook snapshot in Kalshi format with specified depth
+        return orderBook.getOrderbookSnapshotKalshiFormat(depth);
+    }
+    
     public List<Order> getUserOrders(String userId) {
         return persistenceService.getUserOrders(userId);
     }
@@ -359,14 +389,15 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
             return;
         }
         
-        // Get current order book state using the snapshot method
-        Orderbook snapshot = orderBook.getOrderbookSnapshot(10); // Get top 10 levels
+        // Get current order book state in Kalshi format
+        OrderbookResponse.OrderbookData orderbookData = orderBook.getOrderbookSnapshotKalshiFormat(10);
         
-        // Convert to list format for WebSocket - only YES side as per design
-        List<List<Integer>> yesLevels = snapshot.getYes() != null ? snapshot.getYes() : new ArrayList<>();
+        // Convert to list format for WebSocket - now with proper YES/NO separation
+        List<List<Integer>> yesLevels = orderbookData.getYes() != null ? orderbookData.getYes() : new ArrayList<>();
+        List<List<Integer>> noLevels = orderbookData.getNo() != null ? orderbookData.getNo() : new ArrayList<>();
         
-        // Publish snapshot event - only YES orderbook (NO orders are already converted)
-        OrderBookEvent.SnapshotData snapshotData = new OrderBookEvent.SnapshotData(yesLevels, new ArrayList<>());
+        // Publish snapshot event with both YES and NO sides
+        OrderBookEvent.SnapshotData snapshotData = new OrderBookEvent.SnapshotData(yesLevels, noLevels);
         OrderBookEvent event = new OrderBookEvent(OrderBookEvent.EventType.SNAPSHOT, marketTicker, snapshotData);
         eventPublisher.publishEvent(event);
     }

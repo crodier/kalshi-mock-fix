@@ -1,7 +1,7 @@
 package com.kalshi.mock.controller;
 
 import com.fbg.api.rest.*;
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.kalshi.mock.dto.KalshiOrderRequest;
 import com.kalshi.mock.service.OrderBookService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -51,7 +51,7 @@ public class OrderController {
         try {
             // Convert Kalshi request to internal OrderRequest format
             OrderRequest orderRequest = new OrderRequest(
-                Side.valueOf(kalshiRequest.getSide()),
+                KalshiSide.valueOf(kalshiRequest.getSide()),
                 kalshiRequest.getMarketTicker(),
                 kalshiRequest.getType(),
                 kalshiRequest.getCount(),
@@ -185,7 +185,7 @@ public class OrderController {
         for (KalshiOrderRequest kalshiRequest : batchRequests) {
             try {
                 OrderRequest orderRequest = new OrderRequest(
-                    Side.valueOf(kalshiRequest.getSide()),
+                    KalshiSide.valueOf(kalshiRequest.getSide()),
                     kalshiRequest.getMarketTicker(),
                     kalshiRequest.getType(),
                     kalshiRequest.getCount(),

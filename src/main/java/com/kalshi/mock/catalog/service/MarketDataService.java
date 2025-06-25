@@ -1,8 +1,9 @@
 package com.kalshi.mock.catalog.service;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.fbg.api.rest.Orderbook;
 import com.fbg.api.rest.Trade;
+import com.kalshi.mock.dto.OrderbookResponse;
 import com.kalshi.mock.service.OrderBookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -77,6 +78,13 @@ public class MarketDataService {
     }
     
     /**
+     * Get the current orderbook in Kalshi format with separated YES and NO sides
+     */
+    public OrderbookResponse.OrderbookData getMarketOrderbookKalshiFormat(String marketTicker, int depth) {
+        return orderBookService.getOrderbookKalshiFormat(marketTicker, depth);
+    }
+    
+    /**
      * Get trades for a market
      */
     public List<Trade> getTrades(String marketTicker, Long minTs, Long maxTs, String cursor, int limit) {
@@ -116,7 +124,7 @@ public class MarketDataService {
             String takerSide = rs.getString("taker_side");
             // In Kalshi, trades are reported from the taker's perspective
             // Convert BUY/SELL to yes/no Side enum
-            Side side = "BUY".equals(takerSide) ? Side.yes : Side.no;
+            KalshiSide side = "BUY".equals(takerSide) ? KalshiSide.yes : KalshiSide.no;
             
             return new Trade(
                 rs.getString("id"),              // trade_id

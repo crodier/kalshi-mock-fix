@@ -1,6 +1,6 @@
 package com.kalshi.mock.service;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.fbg.api.rest.Fill;
 import com.fbg.api.rest.Position;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,7 +89,7 @@ public class PositionsService {
     /**
      * Get a specific position for a user
      */
-    public Position getUserPosition(String userId, String marketTicker, Side side) {
+    public Position getUserPosition(String userId, String marketTicker, KalshiSide side) {
         positionLock.readLock().lock();
         try {
             return persistenceService.getUserPosition(userId, marketTicker, side);
@@ -141,7 +141,7 @@ public class PositionsService {
      * Close a position (set quantity to 0 and calculate realized P&L)
      */
     @Transactional
-    public void closePosition(String userId, String marketTicker, Side side, int closingPrice) {
+    public void closePosition(String userId, String marketTicker, KalshiSide side, int closingPrice) {
         positionLock.writeLock().lock();
         try {
             Position currentPosition = persistenceService.getUserPosition(userId, marketTicker, side);

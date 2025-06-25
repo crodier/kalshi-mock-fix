@@ -1,7 +1,8 @@
 package com.kalshi.mock.model;
 
 import com.fbg.api.rest.Orderbook;
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
+import com.kalshi.mock.dto.OrderbookResponse;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -203,6 +204,83 @@ public class ConcurrentOrderBook {
     }
     
     /**
+     * Get orderbook snapshot in proper Kalshi API format with separated YES and NO sides
+     * Returns structure matching: {"yes": [[price, qty], ...], "no": [[price, qty], ...]}
+     * 
+     * In Kalshi's format:
+     * - YES array contains Buy YES orders (our bids where side=yes)
+     * - NO array contains Buy NO orders (which we store as Sell YES)
+     * 
+     * Since we normalize everything to YES:
+     * - Buy YES @ X → stored as Buy @ X (in bids)
+     * - Buy NO @ X → stored as Sell @ (100-X) (in asks)
+     */
+    public OrderbookResponse.OrderbookData getOrderbookSnapshotKalshiFormat(int depth) {
+        lock.readLock().lock();
+        try {
+            List<List<Integer>> yesSide = new ArrayList<>();
+            List<List<Integer>> noSide = new ArrayList<>();
+            
+            // In buy-only architecture, we need to separate Buy YES and Buy NO orders
+            // Both are stored in the order book, but we need to identify them correctly
+            
+            // Process Buy YES orders (these appear in bids)
+            Map<Integer, Integer> yesLevels = new TreeMap<>(Comparator.reverseOrder()); // YES: descending
+            Map<Integer, Integer> noLevels = new TreeMap<>(); // NO: ascending (natural order)
+            
+            // Check bids for Buy YES orders
+            for (Map.Entry<Integer, Queue<OrderBookEntry>> level : bids.entrySet()) {
+                for (OrderBookEntry order : level.getValue()) {
+                    if (order.getSide() == KalshiSide.yes && order.getAction().equals("buy")) {
+                        yesLevels.merge(order.getPrice(), order.getQuantity(), Integer::sum);
+                    }
+                }
+            }
+            
+            // Check asks for Buy NO orders (they appear as Sell YES after normalization)
+            for (Map.Entry<Integer, Queue<OrderBookEntry>> level : asks.entrySet()) {
+                for (OrderBookEntry order : level.getValue()) {
+                    if (order.getSide() == KalshiSide.no && order.getAction().equals("buy")) {
+                        // This is a Buy NO order at its original price
+                        noLevels.merge(order.getPrice(), order.getQuantity(), Integer::sum);
+                    }
+                }
+            }
+            
+            // Also check bids for Sell NO orders (they were converted to Buy YES)
+            for (Map.Entry<Integer, Queue<OrderBookEntry>> level : bids.entrySet()) {
+                for (OrderBookEntry order : level.getValue()) {
+                    if (order.getSide() == KalshiSide.no && order.getAction().equals("sell")) {
+                        // This was originally Sell NO @ X, converted to Buy YES @ (100-X)
+                        // It should appear as Buy YES at the normalized price
+                        yesLevels.merge(order.getNormalizedPrice(), order.getQuantity(), Integer::sum);
+                    }
+                }
+            }
+            
+            // Build YES side (up to depth)
+            int count = 0;
+            for (Map.Entry<Integer, Integer> entry : yesLevels.entrySet()) {
+                if (count >= depth) break;
+                yesSide.add(Arrays.asList(entry.getKey(), entry.getValue()));
+                count++;
+            }
+            
+            // Build NO side (up to depth)
+            count = 0;
+            for (Map.Entry<Integer, Integer> entry : noLevels.entrySet()) {
+                if (count >= depth) break;
+                noSide.add(Arrays.asList(entry.getKey(), entry.getValue()));
+                count++;
+            }
+            
+            return new OrderbookResponse.OrderbookData(yesSide, noSide);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    /**
      * Check for crosses (both self-cross and external cross)
      */
     private boolean checkForCross(OrderBookEntry newOrder) {
@@ -235,7 +313,7 @@ public class ConcurrentOrderBook {
         // Find best NO bid (which appears as YES ask from NO buy orders)
         for (Map.Entry<Integer, Queue<OrderBookEntry>> askLevel : asks.entrySet()) {
             for (OrderBookEntry order : askLevel.getValue()) {
-                if (order.getSide() == Side.no && order.getAction().equals("buy")) {
+                if (order.getSide() == KalshiSide.no && order.getAction().equals("buy")) {
                     int noBidPrice = order.getPrice();
                     int yesBidPrice = bestBid.getKey();
                     if (yesBidPrice + noBidPrice > 100) {

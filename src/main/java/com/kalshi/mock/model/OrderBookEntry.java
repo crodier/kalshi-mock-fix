@@ -1,6 +1,6 @@
 package com.kalshi.mock.model;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ public class OrderBookEntry {
     @Getter
     private final String userId;
     @Getter
-    private final Side side;  // YES or NO
+    private final KalshiSide side;  // YES or NO
     @Getter
     private final String action; // buy or sell
     @Getter
@@ -40,7 +40,7 @@ public class OrderBookEntry {
     private final int normalizedPrice;
     private final boolean normalizedIsBuy;
     
-    public OrderBookEntry(String orderId, String userId, Side side, String action, 
+    public OrderBookEntry(String orderId, String userId, KalshiSide side, String action, 
                          int price, int quantity, long timestamp) {
         // Validate price is between 1 and 99 cents
         if (price < 1 || price > 99) {
@@ -58,7 +58,7 @@ public class OrderBookEntry {
         this.sequence = SEQUENCE_GENERATOR.incrementAndGet();
         
         // Apply NO/YES conversion for order book normalization
-        if (side == Side.no) {
+        if (side == KalshiSide.no) {
             if (action.equals("buy")) {
                 // Buy NO @ P → Sell YES @ (100 - P)
                 this.normalizedPrice = 100 - price;

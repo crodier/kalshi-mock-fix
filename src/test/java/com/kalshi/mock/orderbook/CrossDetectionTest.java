@@ -1,6 +1,6 @@
 package com.kalshi.mock.orderbook;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +53,7 @@ public class CrossDetectionTest {
         OrderBookEntry ask = new OrderBookEntry(
             "ORDER-1",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "sell",
             64,
             100,
@@ -66,7 +66,7 @@ public class CrossDetectionTest {
         OrderBookEntry bid = new OrderBookEntry(
             "ORDER-2",
             "USER-2",
-            Side.yes,
+            KalshiSide.yes,
             "buy",
             65,
             100,
@@ -85,7 +85,7 @@ public class CrossDetectionTest {
         OrderBookEntry noAsk = new OrderBookEntry(
             "ORDER-3",
             "USER-1",
-            Side.no,
+            KalshiSide.no,
             "sell",
             35,
             100,
@@ -99,7 +99,7 @@ public class CrossDetectionTest {
         OrderBookEntry noBid = new OrderBookEntry(
             "ORDER-4",
             "USER-2",
-            Side.no,
+            KalshiSide.no,
             "buy",
             36,
             100,
@@ -118,7 +118,7 @@ public class CrossDetectionTest {
         OrderBookEntry yesBid = new OrderBookEntry(
             "ORDER-5",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "buy",
             65,
             100,
@@ -132,7 +132,7 @@ public class CrossDetectionTest {
         OrderBookEntry noBid = new OrderBookEntry(
             "ORDER-6",
             "USER-2",
-            Side.no,
+            KalshiSide.no,
             "buy",
             40,
             100,
@@ -151,7 +151,7 @@ public class CrossDetectionTest {
         OrderBookEntry bid = new OrderBookEntry(
             "ORDER-7",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "buy",
             64,
             100,
@@ -163,7 +163,7 @@ public class CrossDetectionTest {
         OrderBookEntry ask = new OrderBookEntry(
             "ORDER-8",
             "USER-2",
-            Side.yes,
+            KalshiSide.yes,
             "sell",
             66,
             100,
@@ -183,7 +183,7 @@ public class CrossDetectionTest {
         OrderBookEntry yesBid = new OrderBookEntry(
             "ORDER-9",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "buy",
             60,
             100,
@@ -195,7 +195,7 @@ public class CrossDetectionTest {
         OrderBookEntry noBid = new OrderBookEntry(
             "ORDER-10",
             "USER-2",
-            Side.no,
+            KalshiSide.no,
             "buy",
             39,
             100,
@@ -215,7 +215,7 @@ public class CrossDetectionTest {
         OrderBookEntry yesBid = new OrderBookEntry(
             "ORDER-11",
             "USER-1",
-            Side.yes,
+            KalshiSide.yes,
             "buy",
             50,
             100,
@@ -228,7 +228,7 @@ public class CrossDetectionTest {
         OrderBookEntry noBid = new OrderBookEntry(
             "ORDER-12",
             "USER-2",
-            Side.no,
+            KalshiSide.no,
             "buy",
             50,
             100,
@@ -246,14 +246,14 @@ public class CrossDetectionTest {
         
         // Build order book
         // YES bids: 63, 62, 61
-        orderBook.addOrder(new OrderBookEntry("O1", "U1", Side.yes, "buy", 63, 100, 1000));
-        orderBook.addOrder(new OrderBookEntry("O2", "U2", Side.yes, "buy", 62, 200, 1001));
-        orderBook.addOrder(new OrderBookEntry("O3", "U3", Side.yes, "buy", 61, 150, 1002));
+        orderBook.addOrder(new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 63, 100, 1000));
+        orderBook.addOrder(new OrderBookEntry("O2", "U2", KalshiSide.yes, "buy", 62, 200, 1001));
+        orderBook.addOrder(new OrderBookEntry("O3", "U3", KalshiSide.yes, "buy", 61, 150, 1002));
         
         // YES asks: 67, 68, 69
-        orderBook.addOrder(new OrderBookEntry("O4", "U4", Side.yes, "sell", 67, 100, 1003));
-        orderBook.addOrder(new OrderBookEntry("O5", "U5", Side.yes, "sell", 68, 200, 1004));
-        orderBook.addOrder(new OrderBookEntry("O6", "U6", Side.yes, "sell", 69, 150, 1005));
+        orderBook.addOrder(new OrderBookEntry("O4", "U4", KalshiSide.yes, "sell", 67, 100, 1003));
+        orderBook.addOrder(new OrderBookEntry("O5", "U5", KalshiSide.yes, "sell", 68, 200, 1004));
+        orderBook.addOrder(new OrderBookEntry("O6", "U6", KalshiSide.yes, "sell", 69, 150, 1005));
         
         assertFalse(crossDetected.get(), "Initial orders should not cross");
         
@@ -262,7 +262,7 @@ public class CrossDetectionTest {
         OrderBookEntry noBid = new OrderBookEntry(
             "O7",
             "U7",
-            Side.no,
+            KalshiSide.no,
             "buy",
             38,
             100,

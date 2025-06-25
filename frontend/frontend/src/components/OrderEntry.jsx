@@ -5,7 +5,6 @@ import './OrderEntry.css';
 const OrderEntry = ({ marketTicker, onOrderPlaced }) => {
   const [orderForm, setOrderForm] = useState({
     side: 'yes',
-    action: 'buy',
     price: '',
     count: '',
     type: 'limit'
@@ -58,7 +57,7 @@ const OrderEntry = ({ marketTicker, onOrderPlaced }) => {
       const orderData = {
         market_ticker: marketTicker,
         side: orderForm.side,
-        action: orderForm.action,
+        action: 'buy',  // Always buy in buy-only architecture
         type: orderForm.type,
         price: parseInt(orderForm.price),
         count: parseInt(orderForm.count),
@@ -104,16 +103,8 @@ const OrderEntry = ({ marketTicker, onOrderPlaced }) => {
             <div className="form-group">
               <label>Side</label>
               <select name="side" value={orderForm.side} onChange={handleInputChange}>
-                <option value="yes">YES</option>
-                <option value="no">NO</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>Action</label>
-              <select name="action" value={orderForm.action} onChange={handleInputChange}>
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
+                <option value="yes">Buy YES</option>
+                <option value="no">Buy NO</option>
               </select>
             </div>
           </div>
@@ -153,9 +144,9 @@ const OrderEntry = ({ marketTicker, onOrderPlaced }) => {
           <button 
             type="submit" 
             disabled={loading}
-            className={`submit-btn ${orderForm.action}`}
+            className={`submit-btn buy`}
           >
-            {loading ? 'Placing Order...' : `${orderForm.action.toUpperCase()} ${orderForm.side.toUpperCase()}`}
+            {loading ? 'Placing Order...' : `BUY ${orderForm.side.toUpperCase()}`}
           </button>
         </form>
       ) : (

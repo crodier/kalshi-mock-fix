@@ -1,5 +1,18 @@
 # Mock Kalshi FIX Trading Platform
 
+## ⚠️ CRITICAL NAMING CONVENTIONS ⚠️
+
+### Kalshi API Conventions:
+- **KalshiSide** (com.fbg.api.market.KalshiSide): Market side - `yes` or `no`
+- **KalshiAction** (com.fbg.api.market.KalshiAction): Order action - `buy` or `sell`
+- **FIX Side** (quickfix.field.Side): Maps to KalshiAction (1=Buy, 2=Sell)
+- **FIX orders are ALWAYS YES side** - only the action (buy/sell) varies
+
+### Important:
+- Do NOT confuse FIX protocol's "Side" with Kalshi's "Side"
+- FIX Side (1/2) → KalshiAction (buy/sell)
+- Kalshi uses a **buy-only** architecture where all orders are expressed as BUY orders
+
 ## Overview
 
 A comprehensive mock implementation of Kalshi's trading platform featuring both FIX protocol and REST API support. This project provides a complete catalog system (Series, Events, Markets), order management, portfolio tracking, and market data endpoints compatible with Kalshi's API specification.

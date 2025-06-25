@@ -1,6 +1,6 @@
 package com.kalshi.mock.orderbook;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.kalshi.mock.model.ConcurrentOrderBook;
 import com.kalshi.mock.model.OrderBookEntry;
 import com.kalshi.mock.service.MatchingEngine;
@@ -37,9 +37,9 @@ public class OrderModificationTest {
     @DisplayName("Modify quantity at same price maintains FIFO position")
     public void testModifyQuantityMaintainsPosition() {
         // Add three orders at same price
-        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", Side.yes, "buy", 50, 100, 1000);
-        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", Side.yes, "buy", 50, 100, 2000);
-        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", Side.yes, "buy", 50, 100, 3000);
+        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 50, 100, 1000);
+        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", KalshiSide.yes, "buy", 50, 100, 2000);
+        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", KalshiSide.yes, "buy", 50, 100, 3000);
         
         orderBook.addOrder(order1);
         orderBook.addOrder(order2);
@@ -51,7 +51,7 @@ public class OrderModificationTest {
         order2.reduceQuantity(50); // Reduce by 50, leaving 50
         
         // Match a sell order
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", Side.yes, "sell", 50, 120, 4000);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", KalshiSide.yes, "sell", 50, 120, 4000);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         // Should still execute in original order: O1 (100), O2 (20 of remaining 50)
@@ -70,9 +70,9 @@ public class OrderModificationTest {
     @DisplayName("Price change loses FIFO priority")
     public void testPriceChangeLosesPriority() {
         // Add three orders at 50¢
-        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", Side.yes, "buy", 50, 100, 1000);
-        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", Side.yes, "buy", 50, 100, 2000);
-        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", Side.yes, "buy", 50, 100, 3000);
+        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 50, 100, 1000);
+        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", KalshiSide.yes, "buy", 50, 100, 2000);
+        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", KalshiSide.yes, "buy", 50, 100, 3000);
         
         orderBook.addOrder(order1);
         orderBook.addOrder(order2);
@@ -80,7 +80,7 @@ public class OrderModificationTest {
         
         // Cancel order2 and re-add at new price (51¢)
         orderBook.cancelOrder("O2");
-        OrderBookEntry order2New = new OrderBookEntry("O2-NEW", "U2", Side.yes, "buy", 51, 100, 4000);
+        OrderBookEntry order2New = new OrderBookEntry("O2-NEW", "U2", KalshiSide.yes, "buy", 51, 100, 4000);
         orderBook.addOrder(order2New);
         
         // Now we have:
@@ -88,7 +88,7 @@ public class OrderModificationTest {
         // 50¢: O1, O3
         
         // Match a sell order at 50¢
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", Side.yes, "sell", 50, 250, 5000);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", KalshiSide.yes, "sell", 50, 250, 5000);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         // Should match O2-NEW first (better price), then O1, then O3
@@ -102,20 +102,20 @@ public class OrderModificationTest {
     @DisplayName("Modify from YES to NO loses priority (different normalized price)")
     public void testModifyYEStoNOLosesPriority() {
         // Add YES buy at 65¢
-        OrderBookEntry yesBuy1 = new OrderBookEntry("YES-1", "U1", Side.yes, "buy", 65, 100, 1000);
+        OrderBookEntry yesBuy1 = new OrderBookEntry("YES-1", "U1", KalshiSide.yes, "buy", 65, 100, 1000);
         orderBook.addOrder(yesBuy1);
         
         // Add another YES buy at 65¢
-        OrderBookEntry yesBuy2 = new OrderBookEntry("YES-2", "U2", Side.yes, "buy", 65, 100, 2000);
+        OrderBookEntry yesBuy2 = new OrderBookEntry("YES-2", "U2", KalshiSide.yes, "buy", 65, 100, 2000);
         orderBook.addOrder(yesBuy2);
         
         // Cancel YES-1 and re-add as NO sell at 35¢ (converts to Buy YES at 65¢)
         orderBook.cancelOrder("YES-1");
-        OrderBookEntry noSell = new OrderBookEntry("NO-1", "U1", Side.no, "sell", 35, 100, 3000);
+        OrderBookEntry noSell = new OrderBookEntry("NO-1", "U1", KalshiSide.no, "sell", 35, 100, 3000);
         orderBook.addOrder(noSell);
         
         // Match a sell order
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U3", Side.yes, "sell", 65, 150, 4000);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U3", KalshiSide.yes, "sell", 65, 150, 4000);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         // Should match YES-2 first (maintained position), then NO-1
@@ -130,9 +130,9 @@ public class OrderModificationTest {
     @DisplayName("Multiple modifications track priority correctly")
     public void testMultipleModifications() {
         // Initial setup: 3 orders at 60¢
-        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", Side.yes, "buy", 60, 100, 1000);
-        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", Side.yes, "buy", 60, 100, 2000);
-        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", Side.yes, "buy", 60, 100, 3000);
+        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 60, 100, 1000);
+        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", KalshiSide.yes, "buy", 60, 100, 2000);
+        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", KalshiSide.yes, "buy", 60, 100, 3000);
         
         orderBook.addOrder(order1);
         orderBook.addOrder(order2);
@@ -140,12 +140,12 @@ public class OrderModificationTest {
         
         // Modify O1 price to 61¢ (loses priority)
         orderBook.cancelOrder("O1");
-        OrderBookEntry order1Mod = new OrderBookEntry("O1-MOD", "U1", Side.yes, "buy", 61, 100, 4000);
+        OrderBookEntry order1Mod = new OrderBookEntry("O1-MOD", "U1", KalshiSide.yes, "buy", 61, 100, 4000);
         orderBook.addOrder(order1Mod);
         
         // Modify O3 price to 59¢ (different level)
         orderBook.cancelOrder("O3");
-        OrderBookEntry order3Mod = new OrderBookEntry("O3-MOD", "U3", Side.yes, "buy", 59, 100, 5000);
+        OrderBookEntry order3Mod = new OrderBookEntry("O3-MOD", "U3", KalshiSide.yes, "buy", 59, 100, 5000);
         orderBook.addOrder(order3Mod);
         
         // Current state:
@@ -158,7 +158,7 @@ public class OrderModificationTest {
         assertEquals(61, bestBid.getKey());
         
         // Match a large sell order
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", Side.yes, "sell", 59, 300, 6000);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", KalshiSide.yes, "sell", 59, 300, 6000);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         // Should match in price priority: O1-MOD (61¢), O2 (60¢), O3-MOD (59¢)
@@ -172,9 +172,9 @@ public class OrderModificationTest {
     @DisplayName("Size increase at same price maintains position")
     public void testSizeIncreaseMaintainsPosition() {
         // Add orders
-        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", Side.yes, "buy", 70, 50, 1000);
-        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", Side.yes, "buy", 70, 50, 2000);
-        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", Side.yes, "buy", 70, 50, 3000);
+        OrderBookEntry order1 = new OrderBookEntry("O1", "U1", KalshiSide.yes, "buy", 70, 50, 1000);
+        OrderBookEntry order2 = new OrderBookEntry("O2", "U2", KalshiSide.yes, "buy", 70, 50, 2000);
+        OrderBookEntry order3 = new OrderBookEntry("O3", "U3", KalshiSide.yes, "buy", 70, 50, 3000);
         
         orderBook.addOrder(order1);
         orderBook.addOrder(order2);
@@ -184,7 +184,7 @@ public class OrderModificationTest {
         // For testing, we'll simulate by tracking the original position
         
         // Match against current state
-        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", Side.yes, "sell", 70, 60, 4000);
+        OrderBookEntry sellOrder = new OrderBookEntry("S1", "U4", KalshiSide.yes, "sell", 70, 60, 4000);
         List<Execution> executions = matchingEngine.matchOrder(sellOrder, orderBook);
         
         // Should maintain FIFO: O1 (50), O2 (10)

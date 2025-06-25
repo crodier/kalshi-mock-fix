@@ -1,5 +1,18 @@
 # Kalshi Binary Options Market Dynamics
 
+## ⚠️ CRITICAL NAMING CONVENTIONS ⚠️
+
+### Kalshi API Conventions:
+- **KalshiSide**: Market side - `yes` or `no` (which outcome you're betting on)
+- **KalshiAction**: Order action - `buy` or `sell` (your trading action)
+- **FIX Side**: Maps to KalshiAction (1=Buy, 2=Sell) - NOT related to YES/NO
+- **FIX orders are ALWAYS YES side** - only the action varies
+
+### Buy-Only Architecture:
+Kalshi internally uses a **buy-only** architecture:
+- **Sell YES @ X** → converted to **Buy NO @ (100-X)**
+- **Sell NO @ X** → converted to **Buy YES @ (100-X)**
+
 ## Overview
 
 Kalshi operates a binary options market where traders can take positions on whether specific events will occur. Each market has two complementary contracts: YES and NO, which together represent the complete probability space of an event.

@@ -1,6 +1,6 @@
 package com.kalshi.mock.service;
 
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.fbg.api.rest.Fill;
 import com.fbg.api.rest.Position;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +47,7 @@ public class PositionsServiceTest {
             "ORDER-001",
             MARKET_ID,
             MARKET_TICKER,
-            Side.yes,
+            KalshiSide.yes,
             65, // price
             100, // count
             true, // is_taker
@@ -63,7 +63,7 @@ public class PositionsServiceTest {
             eq(USER_ID),
             eq(MARKET_ID),
             eq(MARKET_TICKER),
-            eq(Side.yes),
+            eq(KalshiSide.yes),
             eq(100), // positive quantity for buy
             eq(65)   // price
         );
@@ -78,7 +78,7 @@ public class PositionsServiceTest {
             "ORDER-002",
             MARKET_ID,
             MARKET_TICKER,
-            Side.yes,
+            KalshiSide.yes,
             70, // price
             50, // count
             true, // is_taker
@@ -94,7 +94,7 @@ public class PositionsServiceTest {
             eq(USER_ID),
             eq(MARKET_ID),
             eq(MARKET_TICKER),
-            eq(Side.yes),
+            eq(KalshiSide.yes),
             eq(50), // The service will determine if this should be negative based on action
             eq(70)
         );
@@ -104,9 +104,9 @@ public class PositionsServiceTest {
     @DisplayName("Multiple fills update position correctly")
     public void testMultipleFillsUpdatePosition() {
         // Create multiple fills
-        Fill fill1 = new Fill("F1", "O1", MARKET_ID, MARKET_TICKER, Side.yes, 60, 100, true, 1000L, "T1");
-        Fill fill2 = new Fill("F2", "O2", MARKET_ID, MARKET_TICKER, Side.yes, 62, 50, false, 2000L, "T2");
-        Fill fill3 = new Fill("F3", "O3", MARKET_ID, MARKET_TICKER, Side.yes, 61, 75, true, 3000L, "T3");
+        Fill fill1 = new Fill("F1", "O1", MARKET_ID, MARKET_TICKER, KalshiSide.yes, 60, 100, true, 1000L, "T1");
+        Fill fill2 = new Fill("F2", "O2", MARKET_ID, MARKET_TICKER, KalshiSide.yes, 62, 50, false, 2000L, "T2");
+        Fill fill3 = new Fill("F3", "O3", MARKET_ID, MARKET_TICKER, KalshiSide.yes, 61, 75, true, 3000L, "T3");
         
         List<Fill> fills = Arrays.asList(fill1, fill2, fill3);
         
@@ -118,7 +118,7 @@ public class PositionsServiceTest {
             eq(USER_ID),
             eq(MARKET_ID),
             eq(MARKET_TICKER),
-            eq(Side.yes),
+            eq(KalshiSide.yes),
             anyInt(),
             anyInt()
         );
@@ -128,8 +128,8 @@ public class PositionsServiceTest {
     @DisplayName("Get user positions returns correct data")
     public void testGetUserPositions() {
         // Mock positions
-        Position pos1 = new Position(MARKET_ID, MARKET_TICKER, 100, 65, Side.yes, 0, 6500);
-        Position pos2 = new Position("MKT-2", "MARKET-2", -50, 70, Side.no, 100, 3500);
+        Position pos1 = new Position(MARKET_ID, MARKET_TICKER, 100, 65, KalshiSide.yes, 0, 6500);
+        Position pos2 = new Position("MKT-2", "MARKET-2", -50, 70, KalshiSide.no, 100, 3500);
         List<Position> mockPositions = Arrays.asList(pos1, pos2);
         
         when(persistenceService.getUserPositions(USER_ID)).thenReturn(mockPositions);
@@ -153,7 +153,7 @@ public class PositionsServiceTest {
             MARKET_TICKER,
             100,  // quantity
             65,   // avg_price
-            Side.yes,
+            KalshiSide.yes,
             0,    // realized_pnl
             6500  // total_cost (100 * 65)
         );
@@ -174,7 +174,7 @@ public class PositionsServiceTest {
             MARKET_TICKER,
             -50,   // negative quantity (short)
             80,    // avg_price (sold at this price)
-            Side.yes,
+            KalshiSide.yes,
             0,     // realized_pnl
             -4000  // total_cost (negative for short)
         );
@@ -195,7 +195,7 @@ public class PositionsServiceTest {
             MARKET_TICKER,
             0,    // no position
             0,    // avg_price
-            Side.yes,
+            KalshiSide.yes,
             1000, // realized_pnl
             0     // total_cost
         );
@@ -214,23 +214,23 @@ public class PositionsServiceTest {
             MARKET_TICKER,
             100,  // long position
             60,   // avg_price
-            Side.yes,
+            KalshiSide.yes,
             0,    // realized_pnl
             6000  // total_cost
         );
         
-        when(persistenceService.getUserPosition(USER_ID, MARKET_TICKER, Side.yes))
+        when(persistenceService.getUserPosition(USER_ID, MARKET_TICKER, KalshiSide.yes))
             .thenReturn(existingPosition);
         
         // Close position at 70¢
-        positionsService.closePosition(USER_ID, MARKET_TICKER, Side.yes, 70);
+        positionsService.closePosition(USER_ID, MARKET_TICKER, KalshiSide.yes, 70);
         
         // Verify position was updated to close
         verify(persistenceService).updatePosition(
             eq(USER_ID),
             eq(MARKET_ID),
             eq(MARKET_TICKER),
-            eq(Side.yes),
+            eq(KalshiSide.yes),
             eq(-100), // closing 100 contracts
             eq(70)    // closing price
         );
@@ -240,9 +240,9 @@ public class PositionsServiceTest {
     @DisplayName("Calculate portfolio value with multiple positions")
     public void testCalculatePortfolioValue() {
         // Mock positions
-        Position pos1 = new Position("MKT-1", "TICKER-1", 100, 65, Side.yes, 0, 6500);
-        Position pos2 = new Position("MKT-2", "TICKER-2", -50, 80, Side.yes, 0, -4000);
-        Position pos3 = new Position("MKT-3", "TICKER-3", 200, 45, Side.no, 0, 9000);
+        Position pos1 = new Position("MKT-1", "TICKER-1", 100, 65, KalshiSide.yes, 0, 6500);
+        Position pos2 = new Position("MKT-2", "TICKER-2", -50, 80, KalshiSide.yes, 0, -4000);
+        Position pos3 = new Position("MKT-3", "TICKER-3", 200, 45, KalshiSide.no, 0, 9000);
         
         when(persistenceService.getUserPositions(USER_ID))
             .thenReturn(Arrays.asList(pos1, pos2, pos3));

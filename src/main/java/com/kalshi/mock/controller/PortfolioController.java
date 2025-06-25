@@ -1,7 +1,7 @@
 package com.kalshi.mock.controller;
 
 import com.fbg.api.rest.*;
-import com.fbg.api.market.Side;
+import com.fbg.api.market.KalshiSide;
 import com.kalshi.mock.service.PositionsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -84,7 +84,7 @@ public class PortfolioController {
             "SET-001",
             "MKT-ELECTION-2020",
             "BIDENWIN-20NOV03",
-            Side.yes,
+            KalshiSide.yes,
             100,  // quantity
             100,  // price (settled at $1.00)
             3500, // pnl ($35.00 profit)

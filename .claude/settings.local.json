@@ -1041,7 +1041,8 @@
       "Bash(npm start)",
       "Bash(npm run:*)",
       "Bash(npx vite:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(java:*)"
     ],
     "deny": [
       "Bash(rm:*)",
