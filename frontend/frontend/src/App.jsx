@@ -11,7 +11,8 @@ function App() {
   const [connectionState, setConnectionState] = useState({
     isConnected: false,
     isConnecting: true,
-    error: null
+    error: null,
+    wasConnected: false
   });
   const websocket = useWebSocket();
 
@@ -39,6 +40,7 @@ function App() {
         isConnected={connectionState.isConnected}
         isConnecting={connectionState.isConnecting}
         error={connectionState.error}
+        wasConnected={connectionState.wasConnected}
       />
       <header className="app-header">
         <h1>Mock Kalshi Trading Platform</h1>

@@ -1036,7 +1036,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git tag:*)",
+      "Bash(npm start)",
+      "Bash(npm run:*)"
     ],
     "deny": [
       "Bash(rm:*)",

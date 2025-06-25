@@ -14,7 +14,7 @@ public class OrderBookEntry {
     private final Side side;  // YES or NO
     private final String action; // buy or sell
     private final int price; // in cents
-    private int quantity;
+    private volatile int quantity;
     private final int originalQuantity;
     private final long timestamp;
     private final long sequence; // for FIFO ordering

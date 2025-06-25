@@ -18,9 +18,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
-    
+
+    // one order book per market
     private final Map<String, ConcurrentOrderBook> orderBooks = new ConcurrentHashMap<>();
+
     private final AtomicLong orderIdGenerator = new AtomicLong(1000);
+
     private final MatchingEngine matchingEngine = new MatchingEngine();
     
     @Autowired

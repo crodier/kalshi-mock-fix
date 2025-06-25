@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -66,7 +67,7 @@ public class ConcurrentOrderBook {
             
             Queue<OrderBookEntry> priceLevel = book.computeIfAbsent(
                 order.getNormalizedPrice(), 
-                k -> new LinkedList<>()
+                k -> new LinkedBlockingDeque<>()
             );
             
             priceLevel.offer(order);
@@ -176,17 +177,17 @@ public class ConcurrentOrderBook {
     public Orderbook getOrderbookSnapshot(int depth) {
         lock.readLock().lock();
         try {
-            List<List<Integer>> yesBids = new ArrayList<>();
-            List<List<Integer>> yesAsks = new ArrayList<>();
-            List<List<Integer>> noBids = new ArrayList<>();
-            List<List<Integer>> noAsks = new ArrayList<>();
+            CopyOnWriteArrayList<List<Integer>> yesBids = new CopyOnWriteArrayList<>();
+            List<List<Integer>> yesAsks = new CopyOnWriteArrayList<>();
+            List<List<Integer>> noBids = new CopyOnWriteArrayList<>();
+            List<List<Integer>> noAsks = new CopyOnWriteArrayList<>();
             
             // Aggregate orders by price level and convert back to YES/NO format
             aggregateLevels(bids, true, depth, yesBids, yesAsks, noBids, noAsks);
             aggregateLevels(asks, false, depth, yesBids, yesAsks, noBids, noAsks);
             
             // Combine YES bids and asks into a single list
-            List<List<Integer>> yesOrderbook = new ArrayList<>();
+            List<List<Integer>> yesOrderbook = new CopyOnWriteArrayList<>();
             yesOrderbook.addAll(yesBids);
             yesOrderbook.addAll(yesAsks);
             
@@ -270,7 +271,7 @@ public class ConcurrentOrderBook {
             
             // All orders are shown as YES at their normalized price
             int normalizedPrice = level.getKey();
-            List<Integer> priceLevel = Arrays.asList(normalizedPrice, totalQuantity);
+            List<Integer> priceLevel = new CopyOnWriteArrayList<>(Arrays.asList(normalizedPrice, totalQuantity));
             
             // Determine if this level is bid or ask based on the book it came from
             if (isBidSide) {

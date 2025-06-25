@@ -11,7 +11,8 @@ class WebSocketService {
     this.connectionState = {
       isConnected: false,
       isConnecting: false,
-      error: null
+      error: null,
+      wasConnected: false // Track if we ever established a connection
     };
   }
 
@@ -25,7 +26,7 @@ class WebSocketService {
         this.ws.onopen = () => {
           console.log('WebSocket connected');
           this.reconnectAttempts = 0;
-          this.updateConnectionState({ isConnected: true, isConnecting: false, error: null });
+          this.updateConnectionState({ isConnected: true, isConnecting: false, error: null, wasConnected: true });
           this.resubscribe();
           resolve();
         };
