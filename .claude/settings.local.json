@@ -46,13 +46,11 @@
       "Bash(mkdir:*)",
       "Bash(chmod:*)",
       "Bash(chgrp:*)",
-
       "Bash(cd:*)",
       "Bash(pwd:*)",
       "Bash(pushd:*)",
       "Bash(popd:*)",
       "Bash(dirs:*)",
-
       "Bash(ps:*)",
       "Bash(top:*)",
       "Bash(htop:*)",
@@ -77,7 +75,6 @@
       "Bash(env:*)",
       "Bash(printenv:*)",
       "Bash(history:*)",
-
       "Bash(ping:*)",
       "Bash(wget:*)",
       "Bash(curl:*)",
@@ -89,14 +86,12 @@
       "Bash(host:*)",
       "Bash(ifconfig:*)",
       "Bash(ip:*)",
-
       "Bash(tar:*)",
       "Bash(gzip:*)",
       "Bash(gunzip:*)",
       "Bash(zip:*)",
       "Bash(unzip:*)",
       "Bash(7z:*)",
-
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git show:*)",
@@ -117,7 +112,6 @@
       "Bash(git tag:*)",
       "Bash(git blame:*)",
       "Bash(git shortlog:*)",
-
       "Bash(mvn:*)",
       "Bash(maven:*)",
       "Bash(gradle:*)",
@@ -129,7 +123,6 @@
       "Bash(lein:*)",
       "Bash(bazel:*)",
       "Bash(buck:*)",
-
       "Bash(npm install:*)",
       "Bash(npm update:*)",
       "Bash(npm run:*)",
@@ -176,7 +169,6 @@
       "Bash(yum info:*)",
       "Bash(yum install:*)",
       "Bash(yum update:*)",
-
       "Bash(node:*)",
       "Bash(python:*)",
       "Bash(python3:*)",
@@ -200,14 +192,12 @@
       "Bash(gdb:*)",
       "Bash(lldb:*)",
       "Bash(valgrind:*)",
-
       "Bash(vim:*)",
       "Bash(vi:*)",
       "Bash(nano:*)",
       "Bash(emacs:*)",
       "Bash(code:*)",
       "Bash(subl:*)",
-
       "Bash(docker ps:*)",
       "Bash(docker images:*)",
       "Bash(docker build:*)",
@@ -221,13 +211,11 @@
       "Bash(docker push:*)",
       "Bash(docker tag:*)",
       "Bash(docker-compose:*)",
-
       "Bash(mysql:*)",
       "Bash(psql:*)",
       "Bash(sqlite3:*)",
       "Bash(mongo:*)",
       "Bash(redis-cli:*)",
-
       "Bash(echo:*)",
       "Bash(printf:*)",
       "Bash(sleep:*)",
@@ -261,10 +249,15 @@
       "Bash(man:*)",
       "Bash(info:*)",
       "Bash(apropos:*)",
-      "Bash(whatis:*)"
+      "Bash(whatis:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm create:*)",
+      "Bash(npm:*)",
+      "Bash(npm install)",
+      "Bash(npm *)",
+      "Bash(npm install:*)"
     ],
     "deny": [
-
       "Bash(rm:*)",
       "Bash(rmdir:*)",
       "Bash(shred:*)",
