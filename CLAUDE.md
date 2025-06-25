@@ -1,5 +1,10 @@
 # Mock Kalshi Trading System - Technical Overview
 
+## Business Rules
+
+Refer to @MARKET_DYNAMICS.md for business context
+on the Order Book and single binary option order mechanism
+
 ## System Architecture
 
 This is a mock implementation of Kalshi's binary options trading platform, built with Spring Boot and React. The system simulates a real-time prediction market with FIX protocol support and WebSocket-based market data distribution.
@@ -18,41 +23,6 @@ This is a mock implementation of Kalshi's binary options trading platform, built
    - Order placement interface
    - Portfolio management
    - WebSocket client for live updates
-
-## Binary Options Market Dynamics
-
-### Market Structure
-- **Binary Markets**: Each market represents a yes/no question about a future event
-- **Price Range**: 0-100 cents (representing 0-100% probability)
-- **Settlement**: Markets settle at either 0 or 100 based on the outcome
-
-### YES/NO Order Book Mechanics
-
-**Critical Concept**: The system maintains a single unified order book containing only YES orders. NO orders are automatically converted to equivalent YES orders:
-
-```
-NO Buy @ 40 → YES Sell @ 60
-NO Sell @ 40 → YES Buy @ 60
-```
-
-This conversion follows the fundamental relationship: `YES Price + NO Price = 100`
-
-#### Order Conversion Rules
-1. **NO Buy Orders**: 
-   - Converted to YES Sell orders
-   - Price = 100 - NO price
-   - Example: Buy NO at 30 → Sell YES at 70
-
-2. **NO Sell Orders**:
-   - Converted to YES Buy orders  
-   - Price = 100 - NO price
-   - Example: Sell NO at 30 → Buy YES at 70
-
-3. **Market Display**:
-   - YES side shows actual YES orders
-   - NO side shows inverted YES orders
-   - Best YES Bid at 45 → Best NO Ask at 55
-   - Best YES Ask at 55 → Best NO Bid at 45
 
 ## Real-Time Broadcasting Architecture
 
