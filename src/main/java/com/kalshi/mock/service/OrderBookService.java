@@ -22,7 +22,8 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
     // one order book per market
     private final Map<String, ConcurrentOrderBook> orderBooks = new ConcurrentHashMap<>();
 
-    private final AtomicLong orderIdGenerator = new AtomicLong(1000);
+    // system.current time millis makes sure the next ID is unique.
+    private final AtomicLong orderIdGenerator = new AtomicLong(System.currentTimeMillis());
 
     private final MatchingEngine matchingEngine = new MatchingEngine();
     
