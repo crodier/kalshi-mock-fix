@@ -1033,7 +1033,8 @@
       "Bash(PGPASSWORD=kalshi123 psql -h localhost -U kalshi -d kalshi -c \"\\d markets\")",
       "Bash(cat:*)",
       "Bash(mv:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [
       "Bash(rm:*)",
