@@ -261,6 +261,11 @@ public class OrderControllerIntegrationTest {
         mockMvc.perform(post("/trade-api/v2/portfolio/orders")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(sellOrder)))
+                .andDo(result -> {
+                    if (result.getResponse().getStatus() != 201) {
+                        System.out.println("Error response: " + result.getResponse().getContentAsString());
+                    }
+                })
                 .andExpect(status().isCreated());
         
         // Get fills

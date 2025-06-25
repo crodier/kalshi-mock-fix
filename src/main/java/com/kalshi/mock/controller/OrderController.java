@@ -18,12 +18,16 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/trade-api/v2/portfolio")
 @Tag(name = "Orders", description = "Order management endpoints")
 @SecurityRequirement(name = "ApiKeyAuth")
 public class OrderController {
+    
+    private static final Logger logger = LoggerFactory.getLogger(OrderController.class);
     
     @Autowired
     private OrderBookService orderBookService;
@@ -66,8 +70,10 @@ public class OrderController {
             
             return ResponseEntity.status(HttpStatus.CREATED).body(new OrderResponse(order));
         } catch (IllegalArgumentException e) {
+            logger.error("Bad request creating order: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            logger.error("Error creating order", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

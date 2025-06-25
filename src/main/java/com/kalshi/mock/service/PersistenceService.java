@@ -325,14 +325,14 @@ public class PersistenceService {
                          String passiveOrderId, int quantity, int price) {
         String sql = """
             INSERT INTO trades (
-                id, market_ticker, aggressive_order_id, passive_order_id,
-                quantity, price, created_time
+                trade_id, market_ticker, taker_order_id, maker_order_id,
+                price, quantity, created_time
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         """;
         
         jdbcTemplate.update(sql,
             tradeId, marketTicker, aggressiveOrderId, passiveOrderId,
-            quantity, price, System.currentTimeMillis()
+            price, quantity, System.currentTimeMillis()
         );
     }
 }
