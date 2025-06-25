@@ -169,6 +169,11 @@ public class PersistenceService {
         return jdbcTemplate.query(sql, orderRowMapper, userId, status);
     }
     
+    public List<Map<String, Object>> getOpenOrdersForMarket(String marketTicker) {
+        String sql = "SELECT *, action FROM orders WHERE market_ticker = ? AND status = 'open' ORDER BY created_time ASC";
+        return jdbcTemplate.queryForList(sql, marketTicker);
+    }
+    
     @Transactional
     public void updateOrderStatus(String orderId, String status, int filledQuantity, int remainingQuantity, Integer avgFillPrice) {
         String sql = """

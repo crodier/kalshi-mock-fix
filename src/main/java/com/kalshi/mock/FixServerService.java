@@ -1,5 +1,6 @@
 package com.kalshi.mock;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import quickfix.*;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
+@ConditionalOnProperty(name = "fix.enabled", havingValue = "true", matchIfMissing = true)
 public class FixServerService implements Application {
 
     private Acceptor acceptor;

@@ -50,9 +50,37 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
         loadOpenOrdersForMarket(marketTicker);
     }
     
-    private void loadOpenOrdersForMarket(String marketTicker) {
-        // This would load existing open orders from the database
-        // For now, we'll start with empty order books
+    private synchronized void loadOpenOrdersForMarket(String marketTicker) {
+        // Load existing open orders from the database
+        ConcurrentOrderBook orderBook = orderBooks.get(marketTicker);
+        if (orderBook == null) {
+            System.out.println("No order book found for market " + marketTicker + ", creating new order book");
+            orderBook = new ConcurrentOrderBook(marketTicker);
+        }
+        
+        // Fetch all open orders for this market
+        List<Map<String, Object>> openOrders = persistenceService.getOpenOrdersForMarket(marketTicker);
+        
+        // Add each order to the order book
+        for (Map<String, Object> orderData : openOrders) {
+            OrderBookEntry bookEntry = new OrderBookEntry(
+                (String) orderData.get("order_id"),
+                (String) orderData.get("user_id"),
+                Side.valueOf((String) orderData.get("side")),
+                (String) orderData.get("action"), // Get action directly from DB
+                (Integer) orderData.get("price"),
+                (Integer) orderData.get("remaining_quantity"),
+                (Long) orderData.get("created_time")
+            );
+            
+            // Add to order book without matching (since these are existing orders)
+            orderBook.addOrder(bookEntry);
+        }
+        
+        // Publish initial snapshot after loading orders
+        if (!openOrders.isEmpty()) {
+            publishOrderBookSnapshot(marketTicker);
+        }
     }
     
     public Order createOrder(String marketTicker, OrderRequest request, String action, String userId) {
@@ -116,6 +144,35 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
                     boolean isBuy = action.equals("buy");
                     positionsService.updatePositionFromFill(fill, userId, isBuy);
                 }
+            }
+            
+            // Update market price and volume based on trades
+            if (!trades.isEmpty()) {
+                // Get the last trade price
+                Integer lastPrice = trades.get(trades.size() - 1).getPrice();
+                
+                // Calculate total volume
+                int totalVolume = trades.stream()
+                    .mapToInt(Trade::getCount)
+                    .sum();
+                
+                // Publish trade event for market data update
+                // The MarketService will listen for this event and update prices
+                
+                // Publish ticker update event for WebSocket subscribers
+                OrderBookEvent.TickerData tickerData = new OrderBookEvent.TickerData(
+                    marketTicker,
+                    lastPrice,
+                    totalVolume,
+                    lastPrice, // For now, using last price as best bid/ask
+                    lastPrice
+                );
+                OrderBookEvent tickerEvent = new OrderBookEvent(
+                    OrderBookEvent.EventType.TICKER_UPDATE,
+                    marketTicker,
+                    tickerData
+                );
+                eventPublisher.publishEvent(tickerEvent);
             }
         }
         

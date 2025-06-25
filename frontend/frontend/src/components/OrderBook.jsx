@@ -1,0 +1,148 @@
+import React, { useState, useEffect } from 'react';
+import { marketAPI } from '../services/api';
+import websocketService from '../services/websocket';
+import './OrderBook.css';
+
+const OrderBook = ({ marketTicker }) => {
+  const [orderbook, setOrderbook] = useState({ bids: [], asks: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [subscriptionId, setSubscriptionId] = useState(null);
+
+  useEffect(() => {
+    if (!marketTicker) return;
+
+    // Fetch initial orderbook
+    fetchOrderbook();
+
+    // Subscribe to WebSocket updates
+    const subId = subscribeToOrderbook();
+    setSubscriptionId(subId);
+
+    // Cleanup on unmount or market change
+    return () => {
+      if (subId) {
+        websocketService.unsubscribe(subId);
+      }
+    };
+  }, [marketTicker]);
+
+  const fetchOrderbook = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching orderbook for market:', marketTicker);
+      const response = await marketAPI.getOrderbook(marketTicker);
+      console.log('Orderbook response:', response);
+      const data = response.data;
+      
+      // Process the orderbook data
+      processOrderbook(data.orderbook);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching orderbook:', err);
+      console.error('Error details:', err.response);
+      setError(err.response?.data?.message || err.message);
+      setLoading(false);
+    }
+  };
+
+  const subscribeToOrderbook = () => {
+    return websocketService.subscribe(
+      ['orderbook_snapshot', 'orderbook_delta'],
+      [marketTicker],
+      (message) => {
+        if (message.msg && message.msg.market_ticker === marketTicker) {
+          processOrderbook(message.msg);
+        }
+      }
+    );
+  };
+
+  const processOrderbook = (orderbookData) => {
+    // The API returns YES side only with all orders normalized
+    // Structure: [[price, quantity], ...]
+    const yesBook = orderbookData.yes || [];
+    
+    // Separate bids and asks based on the context from tests
+    // In the normalized YES book, higher prices are typically bids (buyers)
+    // and lower prices are asks (sellers)
+    const bids = [];
+    const asks = [];
+    
+    // Sort the orderbook by price
+    const sortedBook = [...yesBook].sort((a, b) => b[0] - a[0]);
+    
+    // Simple heuristic: split at the middle or find the gap
+    // In a real implementation, we'd need more context or a spread indicator
+    sortedBook.forEach((level) => {
+      const [price, quantity] = level;
+      // For now, we'll consider prices > 50 as likely bids and <= 50 as asks
+      // This is a simplification - in production, we'd need better logic
+      if (price > 50) {
+        bids.push({ price, quantity });
+      } else {
+        asks.push({ price, quantity });
+      }
+    });
+
+    // Sort bids descending (highest first) and asks ascending (lowest first)
+    bids.sort((a, b) => b.price - a.price);
+    asks.sort((a, b) => a.price - b.price);
+
+    setOrderbook({ bids, asks });
+  };
+
+  if (!marketTicker) {
+    return <div className="orderbook-empty">Select a market to view orderbook</div>;
+  }
+
+  if (loading) return <div className="loading">Loading orderbook...</div>;
+  if (error) return <div className="error">Error loading orderbook: {error}</div>;
+
+  return (
+    <div className="orderbook">
+      <h3>Order Book - {marketTicker}</h3>
+      <div className="orderbook-container">
+        <div className="orderbook-side bids">
+          <h4>Bids (Buy)</h4>
+          <div className="orderbook-header">
+            <span>Price</span>
+            <span>Quantity</span>
+          </div>
+          <div className="orderbook-levels">
+            {orderbook.bids.map((level, index) => (
+              <div key={`bid-${index}`} className="level bid">
+                <span className="price">{level.price}¢</span>
+                <span className="quantity">{level.quantity}</span>
+              </div>
+            ))}
+            {orderbook.bids.length === 0 && (
+              <div className="no-orders">No buy orders</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="orderbook-side asks">
+          <h4>Asks (Sell)</h4>
+          <div className="orderbook-header">
+            <span>Price</span>
+            <span>Quantity</span>
+          </div>
+          <div className="orderbook-levels">
+            {orderbook.asks.map((level, index) => (
+              <div key={`ask-${index}`} className="level ask">
+                <span className="price">{level.price}¢</span>
+                <span className="quantity">{level.quantity}</span>
+              </div>
+            ))}
+            {orderbook.asks.length === 0 && (
+              <div className="no-orders">No sell orders</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OrderBook;

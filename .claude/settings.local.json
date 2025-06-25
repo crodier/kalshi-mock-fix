@@ -1019,7 +1019,9 @@
       "Bash(column:*)",
       "Bash(colrm:*)",
       "Bash(rev:*)",
-      "Bash(tac:*)"
+      "Bash(tac:*)",
+      "Bash(PGPASSWORD=kalshi_dev_password psql -h localhost -U kalshi -d kalshi_mock -c \"SELECT ticker, title, status FROM markets;\")",
+      "Bash(mvn clean:*)"
     ],
     "deny": [
       "Bash(rm:*)",

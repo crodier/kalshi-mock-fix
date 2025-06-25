@@ -88,4 +88,26 @@ public class OrderBookEvent {
         public String getSide() { return side; }
         public String getTradeId() { return tradeId; }
     }
+    
+    public static class TickerData {
+        private final String marketTicker;
+        private final Integer lastPrice;
+        private final Integer volume;
+        private final Integer bestBid;
+        private final Integer bestAsk;
+        
+        public TickerData(String marketTicker, Integer lastPrice, Integer volume, Integer bestBid, Integer bestAsk) {
+            this.marketTicker = marketTicker;
+            this.lastPrice = lastPrice;
+            this.volume = volume;
+            this.bestBid = bestBid;
+            this.bestAsk = bestAsk;
+        }
+        
+        public String getMarketTicker() { return marketTicker; }
+        public Integer getLastPrice() { return lastPrice; }
+        public Integer getVolume() { return volume; }
+        public Integer getBestBid() { return bestBid; }
+        public Integer getBestAsk() { return bestAsk; }
+    }
 }
