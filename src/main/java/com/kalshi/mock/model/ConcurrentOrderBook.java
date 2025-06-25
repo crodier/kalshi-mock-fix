@@ -6,6 +6,7 @@ import com.fbg.api.market.Side;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
@@ -37,7 +38,7 @@ public class ConcurrentOrderBook {
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
     // Listeners for order book events
-    private final List<OrderBookListener> listeners = new ArrayList<>();
+    private final List<OrderBookListener> listeners = new CopyOnWriteArrayList<>();
     
     public ConcurrentOrderBook(String marketTicker) {
         this.marketTicker = marketTicker;
@@ -304,8 +305,9 @@ public class ConcurrentOrderBook {
             try {
                 action.accept(listener);
             } catch (Exception e) {
+                System.out.println("Listener notify failed; maybe it is gone? "+e.getMessage());
                 // Log error but don't let one listener break others
-                e.printStackTrace();
+                // e.printStackTrace();
             }
         }
     }

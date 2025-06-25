@@ -38,33 +38,42 @@ public class MarketService {
             Market market = new Market();
             market.setTicker(rs.getString("ticker"));
             market.setEventTicker(rs.getString("event_ticker"));
-            market.setMarketType(MarketType.valueOf(rs.getString("market_type")));
+            market.setMarketType(MarketType.valueOf(rs.getString("market_type").toUpperCase()));
             market.setTitle(rs.getString("title"));
             market.setSubtitle(rs.getString("subtitle"));
             market.setYesSubtitle(rs.getString("yes_subtitle"));
             market.setNoSubtitle(rs.getString("no_subtitle"));
             
-            Timestamp openTime = rs.getTimestamp("open_time");
-            if (openTime != null) {
-                market.setOpenTime(openTime.toLocalDateTime());
+            // Handle BIGINT timestamps stored as milliseconds
+            Long openTimeMillis = rs.getLong("open_time");
+            if (openTimeMillis != null && openTimeMillis > 0) {
+                market.setOpenTime(LocalDateTime.ofInstant(
+                    java.time.Instant.ofEpochMilli(openTimeMillis), 
+                    java.time.ZoneId.systemDefault()));
             }
             
-            Timestamp closeTime = rs.getTimestamp("close_time");
-            if (closeTime != null) {
-                market.setCloseTime(closeTime.toLocalDateTime());
+            Long closeTimeMillis = rs.getLong("close_time");
+            if (closeTimeMillis != null && closeTimeMillis > 0) {
+                market.setCloseTime(LocalDateTime.ofInstant(
+                    java.time.Instant.ofEpochMilli(closeTimeMillis), 
+                    java.time.ZoneId.systemDefault()));
             }
             
-            Timestamp expectedExpTime = rs.getTimestamp("expected_expiration_time");
-            if (expectedExpTime != null) {
-                market.setExpectedExpirationTime(expectedExpTime.toLocalDateTime());
+            Long expectedExpTimeMillis = rs.getLong("expected_expiration_time");
+            if (expectedExpTimeMillis != null && expectedExpTimeMillis > 0) {
+                market.setExpectedExpirationTime(LocalDateTime.ofInstant(
+                    java.time.Instant.ofEpochMilli(expectedExpTimeMillis), 
+                    java.time.ZoneId.systemDefault()));
             }
             
-            Timestamp expTime = rs.getTimestamp("expiration_time");
-            if (expTime != null) {
-                market.setExpirationTime(expTime.toLocalDateTime());
+            Long expTimeMillis = rs.getLong("expiration_time");
+            if (expTimeMillis != null && expTimeMillis > 0 && !rs.wasNull()) {
+                market.setExpirationTime(LocalDateTime.ofInstant(
+                    java.time.Instant.ofEpochMilli(expTimeMillis), 
+                    java.time.ZoneId.systemDefault()));
             }
             
-            market.setStatus(MarketStatus.valueOf(rs.getString("status")));
+            market.setStatus(MarketStatus.valueOf(rs.getString("status").toUpperCase()));
             
             // Price information
             market.setYesBid(rs.getBigDecimal("yes_bid"));
@@ -106,14 +115,23 @@ public class MarketService {
             market.setCustomStrike(rs.getString("custom_strike"));
             market.setIsDeactivated(rs.getBoolean("is_deactivated"));
             
-            Timestamp createdAt = rs.getTimestamp("created_at");
-            if (createdAt != null) {
-                market.setCreatedAt(createdAt.toLocalDateTime());
+            // Handle timestamp fields (if they exist)
+            try {
+                Timestamp createdAt = rs.getTimestamp("created_at");
+                if (createdAt != null) {
+                    market.setCreatedAt(createdAt.toLocalDateTime());
+                }
+            } catch (Exception e) {
+                // created_at might not exist in the result set
             }
             
-            Timestamp updatedAt = rs.getTimestamp("updated_at");
-            if (updatedAt != null) {
-                market.setUpdatedAt(updatedAt.toLocalDateTime());
+            try {
+                Timestamp updatedAt = rs.getTimestamp("updated_at");
+                if (updatedAt != null) {
+                    market.setUpdatedAt(updatedAt.toLocalDateTime());
+                }
+            } catch (Exception e) {
+                // updated_at might not exist in the result set
             }
             
             return market;

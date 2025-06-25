@@ -32,16 +32,8 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
     @Autowired
     private OrderBookEventPublisher eventPublisher;
     
-    @PostConstruct
-    private void initializeTestMarkets() {
-        // Create a few test markets
-        createOrderBook("INXD-23DEC29-B5000");
-        createOrderBook("BTCZ-23DEC31-B50000");
-        createOrderBook("TRUMPWIN-24NOV05");
-        createOrderBook("DUMMY_TEST");
-    }
     
-    private void createOrderBook(String marketTicker) {
+    public void createOrderBook(String marketTicker) {
         ConcurrentOrderBook orderBook = new ConcurrentOrderBook(marketTicker);
         orderBook.addListener(this);
         orderBooks.put(marketTicker, orderBook);
