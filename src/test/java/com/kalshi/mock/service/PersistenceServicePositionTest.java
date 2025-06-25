@@ -14,11 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import com.kalshi.mock.config.TestDatabaseConfig;
+import org.springframework.context.annotation.Import;
 
 @SpringBootTest
 @Transactional
+@Import(TestDatabaseConfig.class)
 @TestPropertySource(properties = {
     "kalshi.database.path=:memory:",  // Use in-memory SQLite for tests
+    "spring.datasource.driver-class-name=org.sqlite.JDBC",
+    "spring.datasource.url=jdbc:sqlite::memory:",
+    "spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect",
+    "quickfix.enabled=false",
     "logging.level.org.springframework.jdbc=DEBUG"
 })
 public class PersistenceServicePositionTest {

@@ -19,11 +19,18 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.kalshi.mock.config.TestDatabaseConfig;
+import org.springframework.context.annotation.Import;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestDatabaseConfig.class)
 @TestPropertySource(properties = {
     "kalshi.database.path=:memory:",  // Use in-memory SQLite for tests
+    "spring.datasource.driver-class-name=org.sqlite.JDBC",
+    "spring.datasource.url=jdbc:sqlite::memory:",
+    "spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect",
+    "quickfix.enabled=false"
 })
 public class PositionTrackingIntegrationTest {
     
@@ -36,8 +43,14 @@ public class PositionTrackingIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
     
+    @Autowired
+    private TestHelper testHelper;
+    
     @BeforeEach
     public void setUp() {
+        // Initialize test market
+        testHelper.initializeTestMarket("TRUMPWIN-24NOV05");
+        
         // Clear all data before each test
         jdbcTemplate.execute("DELETE FROM positions");
         jdbcTemplate.execute("DELETE FROM orders");

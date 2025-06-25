@@ -17,9 +17,21 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.context.annotation.Import;
+import com.kalshi.mock.config.TestDatabaseConfig;
+import org.junit.jupiter.api.BeforeEach;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestDatabaseConfig.class)
+@TestPropertySource(properties = {
+    "kalshi.database.path=:memory:",
+    "spring.datasource.driver-class-name=org.sqlite.JDBC",
+    "spring.datasource.url=jdbc:sqlite::memory:",
+    "spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect",
+    "quickfix.enabled=false"
+})
 public class OrderControllerIntegrationTest {
     
     @Autowired
@@ -27,6 +39,15 @@ public class OrderControllerIntegrationTest {
     
     @Autowired
     private ObjectMapper objectMapper;
+    
+    @Autowired
+    private TestHelper testHelper;
+    
+    @BeforeEach
+    public void setUp() {
+        // Initialize test market
+        testHelper.initializeTestMarket("TRUMPWIN-24NOV05");
+    }
     
     @Test
     @DisplayName("Create Order - Success")

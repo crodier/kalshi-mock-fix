@@ -154,3 +154,109 @@ CREATE TRIGGER update_events_timestamp
 CREATE TRIGGER update_markets_timestamp 
     BEFORE UPDATE ON markets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create Positions table
+CREATE TABLE IF NOT EXISTS positions (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    market_id VARCHAR(255) NOT NULL,
+    market_ticker VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    avg_price INTEGER NOT NULL DEFAULT 0,
+    side VARCHAR(10) NOT NULL CHECK (side IN ('yes', 'no')),
+    realized_pnl INTEGER DEFAULT 0,
+    total_cost INTEGER DEFAULT 0,
+    updated_time BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Unique constraint: one position per user per market per side
+    UNIQUE(user_id, market_ticker, side)
+);
+
+-- Create positions indexes
+CREATE INDEX IF NOT EXISTS idx_positions_user ON positions(user_id);
+CREATE INDEX IF NOT EXISTS idx_positions_market ON positions(market_ticker);
+CREATE INDEX IF NOT EXISTS idx_positions_user_market ON positions(user_id, market_ticker);
+CREATE INDEX IF NOT EXISTS idx_positions_updated ON positions(updated_time);
+
+-- Create trigger to automatically update the updated_at field for positions
+CREATE TRIGGER update_positions_timestamp 
+    BEFORE UPDATE ON positions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create Orders table
+CREATE TABLE IF NOT EXISTS orders (
+    order_id VARCHAR(255) PRIMARY KEY NOT NULL,
+    client_order_id VARCHAR(255),
+    user_id VARCHAR(255) NOT NULL,
+    side VARCHAR(10) NOT NULL CHECK (side IN ('yes', 'no')),
+    action VARCHAR(10) NOT NULL CHECK (action IN ('buy', 'sell')),
+    market_ticker VARCHAR(255) NOT NULL,
+    order_type VARCHAR(20) NOT NULL CHECK (order_type IN ('limit', 'market')),
+    quantity INTEGER NOT NULL,
+    filled_quantity INTEGER DEFAULT 0,
+    remaining_quantity INTEGER NOT NULL,
+    price INTEGER,
+    avg_fill_price INTEGER,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('open', 'partially_filled', 'filled', 'canceled', 'rejected')),
+    time_in_force VARCHAR(10) DEFAULT 'GTC',
+    created_time BIGINT NOT NULL,
+    updated_time BIGINT NOT NULL,
+    expiration_time BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create orders indexes
+CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_market ON orders(market_ticker);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_time);
+CREATE INDEX IF NOT EXISTS idx_orders_user_status ON orders(user_id, status);
+
+-- Create Fills table
+CREATE TABLE IF NOT EXISTS fills (
+    fill_id VARCHAR(255) PRIMARY KEY NOT NULL,
+    order_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255) NOT NULL,
+    market_id VARCHAR(255) NOT NULL,
+    market_ticker VARCHAR(255) NOT NULL,
+    side VARCHAR(10) NOT NULL CHECK (side IN ('yes', 'no')),
+    price INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    is_taker BOOLEAN NOT NULL,
+    filled_time BIGINT NOT NULL,
+    trade_id VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create fills indexes
+CREATE INDEX IF NOT EXISTS idx_fills_order ON fills(order_id);
+CREATE INDEX IF NOT EXISTS idx_fills_user ON fills(user_id);
+CREATE INDEX IF NOT EXISTS idx_fills_market ON fills(market_ticker);
+CREATE INDEX IF NOT EXISTS idx_fills_time ON fills(filled_time);
+CREATE INDEX IF NOT EXISTS idx_fills_trade ON fills(trade_id);
+
+-- Create Trades table
+CREATE TABLE IF NOT EXISTS trades (
+    trade_id VARCHAR(255) PRIMARY KEY NOT NULL,
+    market_ticker VARCHAR(255) NOT NULL,
+    taker_order_id VARCHAR(255) NOT NULL,
+    maker_order_id VARCHAR(255) NOT NULL,
+    price INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    created_time BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create trades indexes
+CREATE INDEX IF NOT EXISTS idx_trades_market ON trades(market_ticker);
+CREATE INDEX IF NOT EXISTS idx_trades_time ON trades(created_time);
+CREATE INDEX IF NOT EXISTS idx_trades_taker ON trades(taker_order_id);
+CREATE INDEX IF NOT EXISTS idx_trades_maker ON trades(maker_order_id);
+
+-- Create triggers for orders
+CREATE TRIGGER update_orders_timestamp 
+    BEFORE UPDATE ON orders
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

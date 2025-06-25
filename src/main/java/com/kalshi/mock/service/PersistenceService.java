@@ -27,11 +27,11 @@ public class PersistenceService {
         @Override
         public Order mapRow(ResultSet rs, int rowNum) throws SQLException {
             return new Order(
-                rs.getString("id"),
+                rs.getString("order_id"),
                 rs.getString("client_order_id"),
                 rs.getString("user_id"),
                 Side.valueOf(rs.getString("side")),
-                rs.getString("symbol"),
+                rs.getString("market_ticker"),  // symbol field maps to market_ticker column
                 rs.getString("order_type"),
                 rs.getInt("quantity"),
                 rs.getInt("filled_quantity"),
@@ -52,15 +52,15 @@ public class PersistenceService {
         @Override
         public Fill mapRow(ResultSet rs, int rowNum) throws SQLException {
             return new Fill(
-                rs.getString("id"),
+                rs.getString("fill_id"),
                 rs.getString("order_id"),
                 rs.getString("market_id"),
                 rs.getString("market_ticker"),
                 Side.valueOf(rs.getString("side")),
                 rs.getInt("price"),
-                rs.getInt("count"),
+                rs.getInt("quantity"),  // count field maps to quantity column
                 rs.getBoolean("is_taker"),
-                rs.getLong("created_time"),
+                rs.getLong("filled_time"),  // created_time field maps to filled_time column
                 rs.getString("trade_id")
             );
         }
@@ -85,38 +85,76 @@ public class PersistenceService {
     // Order operations
     @Transactional
     public void saveOrder(Order order, String action) {
-        String sql = """
-            INSERT OR REPLACE INTO orders (
-                id, client_order_id, user_id, side, symbol, order_type,
-                quantity, filled_quantity, remaining_quantity, price,
-                avg_fill_price, status, time_in_force, created_time,
-                updated_time, expiration_time, action
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+        // First check if order exists
+        String checkSql = "SELECT COUNT(*) FROM orders WHERE order_id = ?";
+        int count = jdbcTemplate.queryForObject(checkSql, Integer.class, order.getId());
         
-        jdbcTemplate.update(sql,
-            order.getId(),
-            order.getClient_order_id(),
-            order.getUser_id(),
-            order.getSide().name(),
-            order.getSymbol(),
-            order.getOrder_type(),
-            order.getQuantity(),
-            order.getFilled_quantity(),
-            order.getRemaining_quantity(),
-            order.getPrice(),
-            order.getAvg_fill_price(),
-            order.getStatus(),
-            order.getTime_in_force(),
-            order.getCreated_time(),
-            order.getUpdated_time(),
-            order.getExpiration_time(),
-            action
-        );
+        if (count > 0) {
+            // Update existing order
+            String updateSql = """
+                UPDATE orders SET
+                    client_order_id = ?, user_id = ?, side = ?, action = ?,
+                    market_ticker = ?, order_type = ?, quantity = ?,
+                    filled_quantity = ?, remaining_quantity = ?, price = ?,
+                    avg_fill_price = ?, status = ?, time_in_force = ?,
+                    created_time = ?, updated_time = ?, expiration_time = ?
+                WHERE order_id = ?
+            """;
+            
+            jdbcTemplate.update(updateSql,
+                order.getClient_order_id(),
+                order.getUser_id(),
+                order.getSide().name(),
+                action,
+                order.getSymbol(),  // market_ticker uses symbol field
+                order.getOrder_type(),
+                order.getQuantity(),
+                order.getFilled_quantity(),
+                order.getRemaining_quantity(),
+                order.getPrice(),
+                order.getAvg_fill_price(),
+                order.getStatus(),
+                order.getTime_in_force(),
+                order.getCreated_time(),
+                order.getUpdated_time(),
+                order.getExpiration_time(),
+                order.getId()
+            );
+        } else {
+            // Insert new order
+            String insertSql = """
+                INSERT INTO orders (
+                    order_id, client_order_id, user_id, side, action,
+                    market_ticker, order_type, quantity, filled_quantity,
+                    remaining_quantity, price, avg_fill_price, status,
+                    time_in_force, created_time, updated_time, expiration_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+            
+            jdbcTemplate.update(insertSql,
+                order.getId(),
+                order.getClient_order_id(),
+                order.getUser_id(),
+                order.getSide().name(),
+                action,
+                order.getSymbol(),  // market_ticker uses symbol field
+                order.getOrder_type(),
+                order.getQuantity(),
+                order.getFilled_quantity(),
+                order.getRemaining_quantity(),
+                order.getPrice(),
+                order.getAvg_fill_price(),
+                order.getStatus(),
+                order.getTime_in_force(),
+                order.getCreated_time(),
+                order.getUpdated_time(),
+                order.getExpiration_time()
+            );
+        }
     }
     
     public Order getOrder(String orderId) {
-        String sql = "SELECT * FROM orders WHERE id = ?";
+        String sql = "SELECT * FROM orders WHERE order_id = ?";
         List<Order> orders = jdbcTemplate.query(sql, orderRowMapper, orderId);
         return orders.isEmpty() ? null : orders.get(0);
     }
@@ -140,7 +178,7 @@ public class PersistenceService {
                 remaining_quantity = ?,
                 avg_fill_price = ?,
                 updated_time = ?
-            WHERE id = ?
+            WHERE order_id = ?
         """;
         
         jdbcTemplate.update(sql, status, filledQuantity, remainingQuantity, avgFillPrice, 
@@ -152,8 +190,8 @@ public class PersistenceService {
     public void saveFill(Fill fill, String userId) {
         String sql = """
             INSERT INTO fills (
-                id, order_id, user_id, market_id, market_ticker,
-                side, price, count, is_taker, created_time, trade_id
+                fill_id, order_id, user_id, market_id, market_ticker,
+                side, price, quantity, is_taker, filled_time, trade_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         
@@ -165,25 +203,25 @@ public class PersistenceService {
             fill.getMarket_ticker(),
             fill.getSide().name(),
             fill.getPrice(),
-            fill.getCount(),
+            fill.getCount(),  // quantity uses count field
             fill.is_taker(),
-            fill.getCreated_time(),
+            fill.getCreated_time(),  // filled_time uses created_time field
             fill.getTrade_id()
         );
     }
     
     public List<Fill> getUserFills(String userId) {
-        String sql = "SELECT * FROM fills WHERE user_id = ? ORDER BY created_time DESC";
+        String sql = "SELECT * FROM fills WHERE user_id = ? ORDER BY filled_time DESC";
         return jdbcTemplate.query(sql, fillRowMapper, userId);
     }
     
     public List<Fill> getUserFillsByMarket(String userId, String marketTicker) {
-        String sql = "SELECT * FROM fills WHERE user_id = ? AND market_ticker = ? ORDER BY created_time DESC";
+        String sql = "SELECT * FROM fills WHERE user_id = ? AND market_ticker = ? ORDER BY filled_time DESC";
         return jdbcTemplate.query(sql, fillRowMapper, userId, marketTicker);
     }
     
     public List<Fill> getFillsByOrderId(String orderId) {
-        String sql = "SELECT * FROM fills WHERE order_id = ? ORDER BY created_time DESC";
+        String sql = "SELECT * FROM fills WHERE order_id = ? ORDER BY filled_time DESC";
         return jdbcTemplate.query(sql, fillRowMapper, orderId);
     }
     
