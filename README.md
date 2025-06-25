@@ -14,6 +14,14 @@ docker-compose up
 
 # Access Swagger UI
 open http://localhost:9090/swagger-ui/index.html
+
+# Start the React frontend (in a separate terminal)
+cd frontend/frontend
+npm install  # First time only
+npm run dev
+
+# Access the React app
+open http://localhost:5173
 ```
 
 ### Local Development
@@ -28,7 +36,18 @@ java -jar target/mock-kalshi-fix-*.jar
 
 # Or use Spring Boot Maven plugin
 mvn spring-boot:run
+
+# Start the React frontend (in a separate terminal)
+cd frontend/frontend
+npm install  # First time only
+npm run dev
 ```
+
+### Access the Applications
+
+- **Backend API**: http://localhost:9090
+- **Swagger UI**: http://localhost:9090/swagger-ui/index.html
+- **React Frontend**: http://localhost:5173
 
 ## 📋 Features
 
@@ -58,14 +77,31 @@ mvn spring-boot:run
 - **QuickFIX/J Integration**: FIX server on port 9878
 - **FIXT.1.1 Support**: Modern FIX protocol implementation
 
+### React Frontend
+- **Real-time Trading UI**: Modern React interface for trading
+- **WebSocket Integration**: Live order book and trade updates
+- **Market Grid**: View all available markets
+- **Order Book Display**: Real-time bid/ask visualization
+- **Order Entry**: Place limit and market orders
+- **Connection Status**: WebSocket connection monitoring
+
 ## 🛠️ Technology Stack
 
+### Backend
 - **Java 17+**
 - **Spring Boot 3.5.3**
 - **PostgreSQL**: Production database
 - **Docker & Docker Compose**: Container orchestration
 - **QuickFIX/J**: FIX protocol implementation
 - **SpringDoc OpenAPI**: API documentation
+- **WebSocket/STOMP**: Real-time updates
+
+### Frontend
+- **React 18**: Modern UI framework
+- **Vite**: Fast build tool
+- **Axios**: HTTP client
+- **STOMP.js**: WebSocket client
+- **CSS3**: Styling
 
 ## 📁 Project Structure
 
@@ -80,6 +116,13 @@ mock-kalshi-fix/
 ├── src/main/resources/
 │   ├── application.yml   # Spring configuration
 │   └── db/schema.sql     # PostgreSQL schema
+├── frontend/frontend/    # React frontend application
+│   ├── src/
+│   │   ├── components/   # React components
+│   │   ├── services/     # API and WebSocket services
+│   │   └── App.jsx       # Main application component
+│   ├── package.json      # Frontend dependencies
+│   └── vite.config.js    # Vite configuration
 ├── scripts/              # Shell scripts for testing
 ├── src/test/http/        # IntelliJ HTTP test files
 └── docker-compose.yml    # Docker configuration
