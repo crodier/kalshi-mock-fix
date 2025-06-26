@@ -19,7 +19,7 @@ Kalshi operates a binary options market where traders can take positions on whet
 
 ## The Fundamental Relationship
 
-The cornerstone of Kalshi's market structure is:
+Binary Option Event crosses occur when:
 
 ```
 YES Price + NO Price = $1.00 (100¢)

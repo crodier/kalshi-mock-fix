@@ -2,7 +2,7 @@
 
 ## Kalshi Order Book
 
-I surmise that Kalshi must be showing the "Buy" sides for "No" and "Yes".  On their order book.
+Kalshi are showing the "Buy" sides for "No" and "Yes".  On their order book.
 
 ## Market Overview
 
@@ -29,7 +29,7 @@ Someone takes the other side, they **Sell** action, side = **NO** at $70 cents.
 
 ## Kalshi reversed meanings:
 
-It may be typical binary options (I will check), but the names are odd.
+It may be typical binary options; however could be Kalshi - the names are odd.
 
 ### Note on renaming of Side:  
 1. Kalshi renamed Yes and No as the "side".
