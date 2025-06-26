@@ -1,5 +1,9 @@
 # Mock Kalshi Trading System - Technical Overview
 
+1. My name is Chris (claude test of reading this)
+2. Ask claude what your name is; verify it read this file = best practices
+3. Important docs:  https://claudelog.com/configuration
+
 ## ⚠️ CRITICAL NAMING CONVENTIONS ⚠️
 
 ### Kalshi API Conventions:
