@@ -4,6 +4,7 @@
       "WebFetch",
       "Read",
       "Edit",
+      "Bash",
       "MultiEdit",
       "Glob",
       "Grep",
