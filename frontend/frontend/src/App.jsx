@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import MarketGrid from './components/MarketGrid';
 import OrderBook from './components/OrderBook';
 import OrderEntry from './components/OrderEntry';
+import EventOrderTicket from './components/EventOrderTicket';
 import ConnectionStatus from './components/ConnectionStatus';
 import { useWebSocket } from './hooks/useWebSocket';
 import './App.css';
@@ -57,6 +58,9 @@ function App() {
           </div>
           
           <div className="order-entry-section">
+            <EventOrderTicket 
+              marketTicker={selectedMarket?.ticker}
+            />
             <OrderEntry 
               marketTicker={selectedMarket?.ticker} 
               onOrderPlaced={handleOrderPlaced}
