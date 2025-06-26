@@ -3,6 +3,7 @@ package com.kalshi.mock.websocket.service;
 import com.kalshi.mock.event.OrderBookEventListener;
 import com.kalshi.mock.event.OrderBookEvent;
 import com.kalshi.mock.service.OrderBookService;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.HashMap;
 
 @Service
+@Slf4j
 public class StompBroadcastService implements OrderBookEventListener {
     private static final Logger logger = LoggerFactory.getLogger(StompBroadcastService.class);
     
@@ -40,12 +42,16 @@ public class StompBroadcastService implements OrderBookEventListener {
                 message.put("yes", snapshot.getYesSide());
                 message.put("no", snapshot.getNoSide());
             }
+            else {
+                log.error("Non snapshot events are not yet handled");
+            }
             
             // Broadcast to all subscribers of this market's orderbook topic
             String destination = "/topic/orderbook/" + market;
             messagingTemplate.convertAndSend(destination, message);
             
-            logger.debug("Broadcasted order book event {} for market {} to {}", event.getType(), market, destination);
+            logger.info("Broadcasted order book event {} for market {} to {}", event.getType(), market, destination);
+
         } catch (Exception e) {
             logger.error("Error broadcasting order book event for market {}", event.getMarketTicker(), e);
         }

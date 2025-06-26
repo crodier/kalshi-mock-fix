@@ -352,6 +352,9 @@ public class OrderBookService implements ConcurrentOrderBook.OrderBookListener {
                 storedOrder.getAvg_fill_price() // Will be recalculated if needed
             );
         }
+        
+        // Publish order book snapshot after execution
+        publishOrderBookSnapshot(marketTicker);
     }
     
     @Override

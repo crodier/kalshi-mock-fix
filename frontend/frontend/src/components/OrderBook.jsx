@@ -75,14 +75,12 @@ const OrderBook = ({ marketTicker }) => {
     });
     
     // Process NO side (Buy NO orders)
-    // Note: Buy NO at price X is equivalent to Sell YES at price (100-X)
-    // So we display these as asks
+    // In buy-only architecture, we display NO orders at their actual price
     const noOrders = orderbookData.no || [];
     noOrders.forEach((level) => {
       const [noPrice, quantity] = level;
-      // Convert NO price to equivalent YES price for display
-      const yesPrice = 100 - noPrice;
-      asks.push({ price: yesPrice, quantity });
+      // Display Buy NO orders at their actual price
+      asks.push({ price: noPrice, quantity });
     });
 
     // Sort bids descending (highest first) and asks ascending (lowest first)
