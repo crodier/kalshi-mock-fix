@@ -57,9 +57,10 @@ This relationship exists because:
 
 When you **sell** a contract (YES or NO), you:
 1. Receive the premium immediately (e.g., 65¢ for selling YES)
-2. Take on an obligation to pay $1.00 if you're wrong
-3. Your maximum profit is the premium received
-4. Your maximum loss is ($1.00 - premium received)
+1. Take on an obligation to pay $1.00 if you're wrong
+1. You must post collateral - margin - in the event you are wrong
+1. Your maximum profit is the premium received
+1. Your maximum loss is ($1.00 - premium received)
 
 ## The Key Insight: Order Equivalence
 
