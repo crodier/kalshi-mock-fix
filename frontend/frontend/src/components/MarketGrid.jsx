@@ -51,7 +51,7 @@ const MarketGrid = ({ onMarketSelect }) => {
           const apiMarkets = response.data.markets.map(market => ({
             ticker: market.ticker,
             name: market.title || market.ticker,
-            lastPrice: market.last_price || 50,
+            lastPrice: market.last_price ? Math.round(market.last_price / 100) : 50,
             volume: market.volume || 0
           }));
           setMarkets(apiMarkets);
@@ -84,7 +84,11 @@ const MarketGrid = ({ onMarketSelect }) => {
     setMarkets(prevMarkets => 
       prevMarkets.map(market => 
         market.ticker === tickerData.marketTicker
-          ? { ...market, lastPrice: tickerData.lastPrice, volume: tickerData.volume }
+          ? { 
+              ...market, 
+              lastPrice: tickerData.lastPrice ? Math.round(tickerData.lastPrice / 100) : market.lastPrice,
+              volume: tickerData.volume 
+            }
           : market
       )
     );
